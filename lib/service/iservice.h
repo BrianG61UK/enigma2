@@ -465,6 +465,7 @@ public:
 		syncState,
 		frontendNumber,
 		signalQualitydB,
+		isUsbTuner,
 		frontendStatus,
 		snrValue,
 		frequency,
@@ -961,6 +962,8 @@ public:
 
 		evVideoGammaChanged,
 
+		evFccFailed,
+
 		evUser = 0x100
 	};
 };
@@ -1019,6 +1022,8 @@ public:
 		evRecordFailed,
 		evRecordWriteError,
 		evNewEventInfo,
+		evTuneStart,
+		evPvrTuneStart,
 		evRecordAborted,
 		evGstRecordEnded,
 	};
