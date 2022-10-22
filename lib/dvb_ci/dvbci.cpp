@@ -135,7 +135,7 @@ eDVBCIInterfaces *eDVBCIInterfaces::getInstance()
 void eDVBCIInterfaces::thread()
 {
 	hasStarted();
-	if (nice(4) == -1)
+	if (nice(-4) == -1)	// Changed to high priority 20221022
 	{
 		eDebug("[CI] thread failed to modify scheduling priority (%m)");
 	}
