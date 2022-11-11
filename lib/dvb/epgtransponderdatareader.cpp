@@ -85,7 +85,7 @@ void eEPGTransponderDataReader::startThread()
 void eEPGTransponderDataReader::thread()
 {
 	hasStarted();
-	if (nice(-4) == -1)	// Changed to high priority 20221022
+	if (nice(-20) == -1)	// Changed to high priority 20221022, 20221111
 	{
 		eDebug("[eEPGTransponderDataReader] thread failed to modify scheduling priority (%m)");
 	}
