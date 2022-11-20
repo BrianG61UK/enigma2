@@ -25,6 +25,9 @@ class BoxInformation:
 				item, value = [x.strip() for x in line.split("=", 1)]
 				if item:
 					self.immutableList.append(item)
+					# Temporary fix: some items that look like floats are not floats and should be handled as strings, e.g. python "3.10" should not be processed as "3.1".
+					if not (value.startswith("\"") or value.startswith("'")) and item in ("python", "imageversion", "imgversion"):
+						value = '"' + value + '"' # wrap it so it is treated as a string
 					self.boxInfo[item] = self.processValue(value)
 			# print("[SystemInfo] Enigma information file data loaded into BoxInfo.")	
 		else:
@@ -33,7 +36,7 @@ class BoxInformation:
 	def processValue(self, value):
 		if value is None:
 			pass
-		elif value.startswith("\"") or value.startswith("'") and value.endswith(value[0]):
+		elif (value.startswith("\"") or value.startswith("'")) and value.endswith(value[0]):
 			value = value[1:-1]
 		elif value.startswith("(") and value.endswith(")"):
 			data = []
@@ -51,8 +54,9 @@ class BoxInformation:
 			value = False
 		elif value.upper() in ("TRUE", "YES", "ON", "ENABLED"):
 			value = True
-		elif value.isdigit() or (value[0:1] == "-" and value[1:].isdigit()):
-			value = int(value)
+		elif value.isdigit() or ((value[0:1] == "-" or value[0:1] == "+") and value[1:].isdigit()):
+			if value[0] != "0": # if this is zero padded it must be a string, so skip
+				value = int(value)
 		elif value.startswith("0x") or value.startswith("0X"):
 			value = int(value, 16)
 		elif value.startswith("0o") or value.startswith("0O"):
