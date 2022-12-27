@@ -3221,7 +3221,7 @@ class InfoBarInstantRecord:
 	def startInstantRecording(self, limitEvent=False):
 		begin = int(time())
 		end = begin + 3600 # dummy
-		name = "instant record"
+		name = _("instant record")
 		info = {}
 
 		self.getProgramInfoAndEvent(info, name)
@@ -3425,10 +3425,14 @@ class InfoBarInstantRecord:
 			return
 
 		if isStandardInfoBar(self):
-			common = ((_("Add recording (stop after current event)"), "event"),
-				(_("Add recording (indefinitely)"), "indefinitely"),
+			info = {}
+			self.getProgramInfoAndEvent(info, "")
+			event_entry = ((_("Add recording (stop after current event)"), "event"),)
+			common = ((_("Add recording (indefinitely)"), "indefinitely"),
 				(_("Add recording (enter recording duration)"), "manualduration"),
 				(_("Add recording (enter recording endtime)"), "manualendtime"),)
+			if info["event"]:
+				common = event_entry + common
 
 			timeshiftcommon = ((_("Timeshift save recording (stop after current event)"), "savetimeshift"),
 				(_("Timeshift save recording (Select event)"), "savetimeshiftEvent"),)
