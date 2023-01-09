@@ -312,7 +312,7 @@ def setupDom(setup=None, plugin=None):
 	if setupFile in setupModTimes:
 		del setupModTimes[setupFile]
 	fileDom = fileReadXML(setupFile)
-	if filedom:
+	if fileDom:
 		checkItems(fileDom, None)
 		setupFileDom = fileDom
 		domSetups[setupFile] = setupFileDom
