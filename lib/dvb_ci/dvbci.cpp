@@ -14,6 +14,7 @@
 
 #include <lib/base/eerror.h>
 #include <lib/base/nconfig.h> // access to python config
+#include <lib/base/prioritise.h> // 230226 Thread priority Increaser
 #include <lib/dvb/db.h>
 #include <lib/dvb/pmt.h>
 #include <lib/dvb_ci/dvbci.h>
@@ -135,7 +136,7 @@ eDVBCIInterfaces *eDVBCIInterfaces::getInstance()
 void eDVBCIInterfaces::thread()
 {
 	hasStarted();
-	if (nice(-16) == -1)	// Changed to high priority 20221022, 20221111
+	if (setThreadHighPriority())	// Changed to high priority 230226
 	{
 		eDebug("[CI] thread failed to modify scheduling priority (%m)");
 	}

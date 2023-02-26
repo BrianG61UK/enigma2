@@ -19,6 +19,7 @@ base_libenigma_base_a_SOURCES = \
 	base/ioprio.cpp \
 	base/message.cpp \
 	base/nconfig.cpp \
+	base/prioritise.cpp \
 	base/rawfile.cpp \
 	base/smartptr.cpp \
 	base/thread.cpp \
@@ -54,6 +55,7 @@ baseinclude_HEADERS = \
 	base/message.h \
 	base/nconfig.h \
 	base/object.h \
+	base/prioritise.h \
 	base/rawfile.h \
 	base/ringbuffer.h \
 	base/smartptr.h \

@@ -17,6 +17,7 @@
 #include <lib/dvb/epgtransponderdatareader.h>
 #include <lib/dvb/lowlevel/eit.h>
 #include <lib/base/nconfig.h>
+#include <lib/base/prioritise.h> // 230226 Thread priority Increaser
 #include <dvbsi++/content_identifier_descriptor.h>
 #include <dvbsi++/descriptor_tag.h>
 
@@ -936,7 +937,7 @@ void eEPGCache::gotMessage( const Message &msg )
 void eEPGCache::thread()
 {
 	hasStarted();
-	if (nice(-16) == -1)	// Changed to high priority 20221022, 20221111
+	if (setThreadHighPriority())	// Changed to high priority 230226
 	{
 		eDebug("[eEPGCache] thread failed to modify scheduling priority (%m)");
 	}

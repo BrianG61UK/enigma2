@@ -1,4 +1,5 @@
 #include <lib/dvb/epgtransponderdatareader.h>
+#include <lib/base/prioritise.h> // 230226 Thread priority Increaser
 
 #include <fstream>
 
@@ -85,7 +86,7 @@ void eEPGTransponderDataReader::startThread()
 void eEPGTransponderDataReader::thread()
 {
 	hasStarted();
-	if (nice(-18) == -1)	// Changed to high priority 20221022, 20221111
+	if (setThreadHighPriority())	// Changed to high priority 230226
 	{
 		eDebug("[eEPGTransponderDataReader] thread failed to modify scheduling priority (%m)");
 	}

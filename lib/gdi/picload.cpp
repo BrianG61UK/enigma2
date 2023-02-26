@@ -780,10 +780,11 @@ void ePicLoad::thread()
 {
 	threadrunning = true;
 	hasStarted();
-	if (nice(4))
-	{
-		eDebug("[ePicLoad] thread failed to modify scheduling priority (%m)");
-	}
+//	if (nice(4))
+//	{
+//		eDebug("[ePicLoad] thread failed to modify scheduling priority (%m)");
+//	}
+//	The above section Removed 230226
 	runLoop();
 }
 

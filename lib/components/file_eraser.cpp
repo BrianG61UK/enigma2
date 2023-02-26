@@ -42,11 +42,12 @@ eBackgroundFileEraser::~eBackgroundFileEraser()
 void eBackgroundFileEraser::thread()
 {
 	hasStarted();
-	if (nice(5) == -1)
-	{
-		eDebug("[eBackgroundFileEraser] thread failed to modify scheduling priority (%m)");
-	}
-	setIoPrio(IOPRIO_CLASS_BE, 7);
+//	if (nice(5) == -1)
+//	{
+//		eDebug("[eBackgroundFileEraser] thread failed to modify scheduling priority (%m)");
+//	}
+//	The above section Removed 230226
+//	setIoPrio(IOPRIO_CLASS_BE, 7);
 	reset();
 	runLoop();
 	stop_thread_timer->stop();
