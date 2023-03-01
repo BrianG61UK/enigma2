@@ -46,8 +46,8 @@ void eBackgroundFileEraser::thread()
 //	{
 //		eDebug("[eBackgroundFileEraser] thread failed to modify scheduling priority (%m)");
 //	}
-//	The above section Removed 230226
 //	setIoPrio(IOPRIO_CLASS_BE, 7);
+//	The above section Removed 230226
 	reset();
 	runLoop();
 	stop_thread_timer->stop();
