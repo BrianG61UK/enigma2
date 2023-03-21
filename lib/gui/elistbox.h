@@ -140,7 +140,17 @@ public:
 		moveEnd,
 		pageUp,
 		pageDown,
-		justCheck
+		justCheck,
+		moveStartTop,
+		moveStart,
+		prevItemPage,
+		prevPageItem,
+		prevItem,
+		nextItemPage,
+		nextPageItem,
+		nextItem,
+		prevPage,
+		nextPage
 	};
 
 	void setItemHeight(int h);

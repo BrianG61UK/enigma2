@@ -140,25 +140,52 @@ void eListbox::moveToEnd()
 void eListbox::moveSelection(long dir)
 {
 	long r_dir = dir;
+	// For compatability reasons we add this so to support current listbox actions in horizontal listboxes
+	if (m_orientation == orHorizontal) {
+		switch (dir) {
+			case moveUp:
+				r_dir = prevPage;
+				break;
+			case moveDown:
+				r_dir = nextPage;
+				break;
+			case pageUp:
+				r_dir = prevItem;
+				break;
+			case pageDown:
+				r_dir = nextItem;
+				break;
+		}
+	}
+
+	// Map universal actions to the corresponding action for Horizontal and vertical eListbox
 	switch (dir) {
-		case moveUp:
+		case prevItemPage:
 			if (m_orientation == orHorizontal){
-				r_dir = pageUp;
+				r_dir = prevPage;
+			} else {
+				r_dir = prevItem;
 			}
 			break;
-		case moveDown:
+		case nextItemPage:
 			if (m_orientation == orHorizontal){
-				r_dir = pageDown;
+				r_dir = nextPage;
+			} else {
+				r_dir = nextItem;
 			}
 			break;
-		case pageUp:
-			if (m_orientation == orHorizontal){
-				r_dir = moveUp;
+		case prevPageItem:
+			if (m_orientation == orVertical){
+				r_dir = prevPage;
+			} else {
+				r_dir = prevItem;
 			}
 			break;
-		case pageDown:
-			if (m_orientation == orHorizontal){
-				r_dir = moveDown;
+		case nextPageItem:
+			if (m_orientation == orVertical){
+				r_dir = nextPage;
+			} else {
+				r_dir = nextItem;
 			}
 			break;
 	}
@@ -180,6 +207,7 @@ void eListbox::moveSelection(long dir)
 			m_content->cursorEnd();
 			[[fallthrough]];
 		case moveUp:
+		case prevItem:
 			do
 			{
 				m_content->cursorMove(-1);
@@ -202,6 +230,7 @@ void eListbox::moveSelection(long dir)
 			while (newsel != oldsel && !m_content->currentCursorSelectable());
 			break;
 		case moveTop:
+		case moveStart:
 			m_content->cursorHome();
 			[[fallthrough]];
 		case justCheck:
@@ -209,6 +238,7 @@ void eListbox::moveSelection(long dir)
 				break;
 			[[fallthrough]];
 		case moveDown:
+		case nextItem:
 			do
 			{
 				m_content->cursorMove(1);
@@ -222,7 +252,8 @@ void eListbox::moveSelection(long dir)
 			}
 			while (newsel != oldsel && !m_content->currentCursorSelectable());
 			break;
-		case pageUp: {
+		case pageUp: 
+		case prevPage: {
 			int pageind;
 			do
 			{
@@ -261,7 +292,8 @@ void eListbox::moveSelection(long dir)
 			while (newsel == prevsel);
 			break;
 		}
-		case pageDown: {
+		case pageDown:
+		case nextPage: {
 			int pageind;
 			do
 			{
