@@ -21,6 +21,6 @@
 int setThreadHighPriority() {
 	// Set pthread thread priority and set scheduling policy to SCHED_FIFO
 	struct sched_param param;
-	param.sched_priority = HIGHEST_PRIORITY;
+	param.sched_priority = HIGHER_PRIORITY;
 	return pthread_setschedparam(pthread_self(), SCHED_FIFO, &param);
 }
