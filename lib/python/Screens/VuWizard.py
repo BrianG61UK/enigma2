@@ -44,7 +44,7 @@ class VuWizard(WizardLanguage, Rc):
 			self.onShow.remove(self.welcomeWarning)
 		popup = self.session.openWithCallback(self.welcomeAction, MessageBox, _("Welcome to OpenViX!\n\n"
 			"Select 'Standard' to setup Standard Vu+ image.\n\n"
-			"Select 'Multiboot' to setup Vu+ Multiboot."), type=MessageBox.TYPE_YESNO, timeout=-1, 
+			"Select 'Multiboot' to setup Vu+ Multiboot."), type=MessageBox.TYPE_YESNO, timeout=-1,
 			default=False, list=[(_("Standard"), False), (_("Multiboot"), True)])
 		popup.setTitle(_("Vu+ 4K image install options"))
 
@@ -82,7 +82,7 @@ class VuWizard(WizardLanguage, Rc):
 				if hddExt4:
 					if not pathExists("/media/hdd/%s" % getBoxType()):
 						cmdlist.append("mkdir /media/hdd/%s" % getBoxType())
-					if  pathExists("/media/hdd/%s/linuxrootfs1" % getBoxType()):
+					if pathExists("/media/hdd/%s/linuxrootfs1" % getBoxType()):
 						cmdlist.append("rm -rf /media/hdd/%s/linuxrootfs1" % getBoxType())
 					cmdlist.append("mkdir /tmp/mmc")
 					cmdlist.append("mount /dev/%s /tmp/mmc" % getMachineMtdRoot())
@@ -102,10 +102,9 @@ class VuWizard(WizardLanguage, Rc):
 		else:
 			self.close()
 
-
 	def eMMCload(self, *args, **kwargs):
 		cmdlist = []
-		for eMMCslot in range(1,4):
+		for eMMCslot in range(1, 4):
 			if pathExists("/media/hdd/%s/linuxrootfs%s" % (getBoxType(), eMMCslot)):
 				cmdlist.append("cp -R /media/hdd/%s/linuxrootfs%s . /" % (getBoxType(), eMMCslot))
 				cmdlist.append("rm -r /media/hdd/%s/linuxrootfs%s" % (getBoxType(), eMMCslot))
