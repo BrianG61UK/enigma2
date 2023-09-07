@@ -18,6 +18,14 @@ from Screens.Screen import Screen
 config.swapmanager = ConfigSubsection()
 config.swapmanager.swapautostart = ConfigYesNo(default=False)
 
+# start: temp code - used due to config variable change
+config.vixsettings.swapautostart = ConfigYesNo(default=False)
+if config.vixsettings.swapautostart.value:
+	config.swapmanager.swapautostart.value = True
+	# switch off so doesn't happen on any subsuquent run
+	config.vixsettings.swapautostart.value = False
+	config.vixsettings.swapautostart.save()
+# end: temp code
 startswap = None
 
 
@@ -138,7 +146,7 @@ class VIXSwap(Screen):
 		self["active"] = Label(_("Active"))
 		self["key_red"] = Label(_("Close"))
 		self["key_green"] = Label(_("Activate"))
-		self["key_yellow"] = Label(_("Autostart"))
+		self["key_yellow"] = Label(_("Enable Autostart"))
 		self["key_blue"] = Label(_("Create"))
 		self["swapname_summary"] = StaticText()
 		self["swapactive_summary"] = StaticText()
@@ -291,16 +299,16 @@ class VIXSwap(Screen):
 			scanning = _("Enable SWAP at startup")
 
 		if config.swapmanager.swapautostart.value or self.swap_name == _("manufacturer defined swap"):
-#		if config.swapmanager.swapautostart.value:
 			self["autostart_off"].hide()
 			self["autostart_on"].show()
-			self["key_yellow"].setText("")
+			self["key_yellow"].setText(_("Disable Autostart"))
 		else:
 			config.swapmanager.swapautostart.setValue(False)
 			config.swapmanager.swapautostart.save()
 			configfile.save()
 			self["autostart_on"].hide()
 			self["autostart_off"].show()
+			self["key_yellow"].setText(_("Enable Autostart"))
 		self["lab1"].setText(scanning)
 		self["lab1"].show()
 		self["actions"].setEnabled(True)
