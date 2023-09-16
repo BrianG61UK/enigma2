@@ -72,7 +72,7 @@
 #   modified version of the Autoconf Macro, you may extend this special
 #   exception to the GPL to apply to your modified version as well.
 
-#serial 36
+#serial 36 --------------Updated to cross compile for OE-Alliance Enigma2 git builds
 
 AU_ALIAS([AC_PYTHON_DEVEL], [AX_PYTHON_DEVEL])
 AC_DEFUN([AX_PYTHON_DEVEL],[
@@ -275,13 +275,19 @@ EOD`
 		if test -n "$ac_python_libdir" -a -n "$ac_python_library"
 		then
 			# use the official shared library
-			# Cross compile ac_python_libdir = builds/openvix/release/boxtype/tmp/work/boxtype-oe-linux-gnueabi/enigma2/enigma2-7.3+gitAUTOINC+XXXXXXXXX-r0/recipe-sysroot/usr/lib
-			# Build PC ac_python_library = python3.11
-			# so pick up ac_python_libdir from previous search for Python library path for Cross compile
-			ac_python_libdir_XCompile=`echo "$ac_python_libdir" | sed "s_/usr/lib__"`			
+			# if not Github workflow, cross compile ac_python_libdir = builds/distro/release/boxtype/tmp/work/boxtype-oe-linux-gnueabi/enigma2/enigma2-7.3+gitAUTOINC+XXXXXXXXX-rx/recipe-sysroot/usr/lib
+			# so then pick up ac_python_libdir from previous search for Python library path for Cross compile
+			hosted="hosted"
+			# first check for git workflows via hosted
+			if grep -q "${hosted}" <<< "$ac_python_libdir"
+			then
+				ac_python_libdir_XCompile=''
+			else
+				ac_python_libdir_XCompile=`echo "$ac_python_libdir" | sed "s_/usr/lib__"`
+			fi
 			ac_python_library=`echo "$ac_python_library" | sed "s/^lib//"`
 			AC_MSG_RESULT([$ac_python_libdir])
-			AC_MSG_RESULT([$ac_python_library])						
+			AC_MSG_RESULT([$ac_python_library])
 			PYTHON_LIBS="-L$ac_python_libdir -l$ac_python_library"
 		else
 			# old way: use libpython from python_configdir
@@ -338,7 +344,7 @@ EOD`
 		PYTHON_CPPFLAGS=$python_path
 	   fi
 	   AC_MSG_RESULT([$PYTHON_CPPFLAGS])
-	   AC_SUBST([PYTHON_CPPFLAGS])	   
+	   AC_SUBST([PYTHON_CPPFLAGS])
 	fi
 
 	if test $ax_python_devel_found = yes; then
@@ -368,7 +374,7 @@ print(sitedir)"`
 				print (sysconfig.get_python_lib(0,0));"`
 		fi
 	   fi
-	   PYTHON_SITE_PKG="$ac_python_libdir_XCompile$PYTHON_SITE_PKG2"	   
+	   PYTHON_SITE_PKG="$ac_python_libdir_XCompile$PYTHON_SITE_PKG2"
 	   AC_MSG_RESULT([$PYTHON_SITE_PKG])
 	   AC_SUBST([PYTHON_SITE_PKG])
 
@@ -398,7 +404,7 @@ print(sitedir)"`
 				print (sysconfig.get_python_lib(1,0));"`
 		fi
 	   fi
-	   PYTHON_PLATFORM_SITE_PKG="$ac_python_libdir_XCompile$PYTHON_PLATFORM_SITE_PKG2"	   
+	   PYTHON_PLATFORM_SITE_PKG="$ac_python_libdir_XCompile$PYTHON_PLATFORM_SITE_PKG2"
 	   AC_MSG_RESULT([$PYTHON_PLATFORM_SITE_PKG])
 	   AC_SUBST([PYTHON_PLATFORM_SITE_PKG])
 
