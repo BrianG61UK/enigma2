@@ -1,11 +1,10 @@
 from datetime import datetime
 import glob
-import shutil
 import subprocess
 import tempfile
 from os import mkdir, path, rmdir, rename, remove, sep, stat
 
-from boxbranding import getMachineBuild, getMachineMtdRoot
+from boxbranding import getMachineMtdRoot
 from Components.Console import Console
 from Components.SystemInfo import SystemInfo, BoxInfo as BoxInfoRunningInstance, BoxInformation
 from Tools.Directories import fileHas, fileExists
@@ -166,10 +165,7 @@ def GetImagelist(Recovery=None):
 		print("[multiboot] [GetImagelist] slot = ", slot)
 		BuildVersion = "  "
 		Build = " "  # ViX Build No.
-		Dev = " "  # ViX Dev No.
 		Creator = " "  # Openpli Openvix Openatv etc
-		Date = " "
-		BuildType = " "  # release etc
 		Imagelist[slot] = {"imagename": _("Empty slot")}
 		imagedir = "/"
 		if SystemInfo["MultiBootSlot"] != slot or SystemInfo["HasHiSi"]:
