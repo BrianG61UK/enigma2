@@ -5,6 +5,7 @@ from Components.config import config
 from Components.Label import Label
 from Components.Language import language
 from Components.Language_cache import LANG_TEXT
+from Components.Pixmap import Pixmap
 from Components.Sources.List import List
 from Components.Sources.StaticText import StaticText
 from Components.Pixmap import Pixmap
@@ -43,8 +44,7 @@ class LanguageSelection(Screen):
 		self.catalog = language.getActiveCatalog()
 
 		self.list = []
-		self["summarylangname"] = StaticText()
-		self["summarylangsel"] = StaticText()
+		self.onChangedEntry = []
 		self["languages"] = List(self.list)
 		self["languages"].onSelectionChanged.append(self.changed)
 
@@ -67,28 +67,27 @@ class LanguageSelection(Screen):
 			"blue": self.delLang,
 			"menu": self.installLanguage,
 		}, -1)
-		self.pos = 0
 
 	def updateCache(self):
 #		print("[LanguageSelection] updateCache")
 		self["languages"].setList([('update cache', _('Updating cache, please wait...'), None)])
+		self.updateTimer = eTimer()
+		self.updateTimer.callback.append(self.startupdateCache)
+		self.updateTimer.start(100)
+
+	def startupdateCache(self):
+		self.updateTimer.stop()
 		language.updateLanguageCache()
 		self["languages"].setList(self.list)
 		self.selectActiveLanguage()
 
 	def selectActiveLanguage(self):
 		activeLanguage = language.getActiveLanguage()
+		pos = 0
 		for pos, x in enumerate(self.list):
 			if x[0] == activeLanguage:
 				self["languages"].index = pos
-				self.pos = pos
 				break
-		self.timer = eTimer()
-		self.timer.callback.append(self.updateSelection)
-		self.timer.start(5)
-
-	def updateSelection(self):
-		self["languages"].selectionChanged(self.pos)
 
 	def save(self):
 		self.run()
@@ -163,7 +162,6 @@ class LanguageSelection(Screen):
 
 		if lang == 'update cache':
 			self.setTitle(_("Updating Cache"))
-			self["summarylangname"].setText(_("Updating cache"))
 			return
 
 		if lang != config.osd.language.value:
@@ -171,10 +169,12 @@ class LanguageSelection(Screen):
 			config.osd.language.save()
 
 		self.setTitle(_cached("T2"))
-		self["summarylangname"].setText(_cached("T2"))
-		self["summarylangsel"].setText(self["languages"].getCurrent()[1])
+		self.current = self["languages"].getCurrent()
 		self["key_red"].setText(_cached("T3"))
 		self["key_green"].setText(_cached("T4"))
+		for f in self.onChangedEntry:
+			if callable(f):
+				f()
 
 		if justlocal:
 			return
@@ -211,6 +211,29 @@ class LanguageSelection(Screen):
 class LanguageSelectionSummary(ScreenSummary):
 	def __init__(self, session, parent):
 		ScreenSummary.__init__(self, session, parent)
+		self.parent = parent
+		self["flag"] = Pixmap()
+		self["summarylangsel"] = StaticText()
+		self["title"] = StaticText(parent.getTitle())
+		if self.addWatcher not in self.onShow:
+			self.onShow.append(self.addWatcher)
+		if self.removeWatcher not in self.onHide:
+			self.onHide.append(self.removeWatcher)
+
+	def addWatcher(self):
+		if self.selectionChanged not in self.parent.onChangedEntry:
+			self.parent.onChangedEntry.append(self.selectionChanged)
+		self.selectionChanged()
+
+	def removeWatcher(self):
+		if self.selectionChanged in self.parent.onChangedEntry:
+			self.parent.onChangedEntry.remove(self.selectionChanged)
+
+	def selectionChanged(self):
+		current = self.parent.current
+		self["summarylangsel"].text = current[1]
+		if current[2]:
+			self["flag"].instance.setPixmap(current[2])
 
 
 class LanguageWizard(LanguageSelection, Rc):
