@@ -14,7 +14,7 @@ from Tools.LoadPixmap import LoadPixmap
 class ColorButtonsSequence(GUIAddon):
 	def __init__(self):
 		GUIAddon.__init__(self)
-		self.foreColor = 0xffffff
+		self.foreColor = None
 		self.font = gFont("Regular", 18)
 		self.l = eListboxPythonMultiContent()  # noqa: E741
 		self.l.setBuildFunc(self.buildEntry)
@@ -36,6 +36,8 @@ class ColorButtonsSequence(GUIAddon):
 			if self.constructColorButtonSequence not in val.onChanged:
 				val.onChanged.append(self.constructColorButtonSequence)
 		self.textRenderer.GUIcreate(self.relatedScreen.instance)
+		self.l.setItemHeight(self.instance.size().height())
+		self.l.setItemWidth(self.instance.size().width())
 		self.constructColorButtonSequence()
 
 	GUI_WIDGET = eListbox
@@ -88,10 +90,13 @@ class ColorButtonsSequence(GUIAddon):
 			else:
 				textWidth = 0
 			if self.layoutStyle != "fluid":
-				if textWidth < (minSectorWidth - self.spacingButtons - self.spacingPixmapText - pixd_width):
-					textWidth = minSectorWidth - self.spacingButtons - self.spacingPixmapText - pixd_width
+				if textWidth < (minSectorWidth - self.spacingButtons - (self.spacingPixmapText if pic else 0) - pixd_width):
+					textWidth = minSectorWidth - self.spacingButtons - (self.spacingPixmapText if pic else 0) - pixd_width
 			if buttonText:
-				res.append((eListboxPythonMultiContent.TYPE_TEXT, xPos, yPos, textWidth, height - 2, 0, RT_HALIGN_LEFT | RT_VALIGN_CENTER, buttonText, textColor if not pic else self.foreColor))
+				if textColor is not None:
+					res.append((eListboxPythonMultiContent.TYPE_TEXT, xPos, yPos, textWidth, height - 2, 0, RT_HALIGN_LEFT | RT_VALIGN_CENTER, buttonText, textColor))
+				else:
+					res.append((eListboxPythonMultiContent.TYPE_TEXT, xPos, yPos, textWidth, height - 2, 0, RT_HALIGN_LEFT | RT_VALIGN_CENTER, buttonText))
 				xPos += textWidth + self.spacingButtons
 			if xPos > width and self.layoutStyle != "fluid":
 				self.layoutStyle = "fluid"
@@ -117,11 +122,7 @@ class ColorButtonsSequence(GUIAddon):
 		for (attrib, value) in self.skinAttributes[:]:
 			if attrib == "pixmaps":
 				self.pixmaps = dict(item.split(':') for item in value.split(','))
-			elif attrib == "itemHeight":
-				self.l.setItemHeight(parseScale(value))
-			elif attrib == "itemWidth":
-				self.l.setItemWidth(parseScale(value))
-			elif attrib == "spacingButtons":
+			elif attrib == "spacing":
 				self.spacingButtons = parseScale(value)
 			elif attrib == "spacingPixmapText":
 				self.spacingPixmapText = parseScale(value)
