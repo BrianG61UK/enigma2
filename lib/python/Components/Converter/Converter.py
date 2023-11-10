@@ -17,5 +17,5 @@ class Converter(Element):
 		if str == "":
 			str = part
 		else:
-			str = str + self.separatorChar.replace("&nbsp;", " ").replace("&comma;", ",") + part
+			str = str + self.separatorChar + part
 		return str

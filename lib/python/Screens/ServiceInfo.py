@@ -172,10 +172,9 @@ class ServiceInfo(Screen):
 			resolution = "-"
 			if self.info:
 				from Components.Converter.PliExtraInfo import codec_data
-				from Components.Converter.ServiceInfo import getVideoHeight, getVideoWidth
 				videocodec = codec_data.get(self.info.getInfo(iServiceInformation.sVideoType), "N/A")
-				width = getVideoWidth(self.info)
-				height = getVideoHeight(self.info)
+				width = self.info.getInfo(iServiceInformation.sVideoWidth)
+				height = self.info.getInfo(iServiceInformation.sVideoHeight)
 				if width > 0 and height > 0:
 					fps = (self.info.getInfo(iServiceInformation.sFrameRate) + 500) // 1000
 					if fps in (0, -1):
