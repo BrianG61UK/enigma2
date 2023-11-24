@@ -84,9 +84,9 @@ class ServiceList(GUIComponent):
 		self.progressPercentWidth = 0
 		self.fieldMargins = 10
 		self.sidesMargin = 0
-		self.ItemHeight = applySkinFactor(36)
+		self.ItemHeight = applySkinFactor(28)
 		self.ItemHeightTwoLine = applySkinFactor(58)
-		self.ItemHeightSkin = applySkinFactor(36)
+		self.ItemHeightSkin = applySkinFactor(28)
 		self.ItemHeightTwoLineSkin = applySkinFactor(58)
 		self.selectionPixmapSingle = None
 		self.selectionPixmapDouble = None
@@ -241,7 +241,10 @@ class ServiceList(GUIComponent):
 		def markerTextAlignment(value):
 			self.l.setMarkerTextAlignment(value)
 
-		for (attrib, value) in self.skinAttributes[:]:
+		def serviceItemHeight(value):  # for legacy support
+			itemHeight(value)
+
+		for (attrib, value) in sorted(self.skinAttributes, key=lambda x: 0 if x[0] == "itemHeight" else 1):
 			try:
 				locals().get(attrib)(value)
 				self.skinAttributes.remove((attrib, value))
