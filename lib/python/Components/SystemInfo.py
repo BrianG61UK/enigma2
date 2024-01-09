@@ -48,7 +48,7 @@ class BoxInformation:
 		return sorted(self.immutableList)
 
 	def getEnigmaConfList(self):  # not used by us
-		return []
+		return []  # return an empty list because we do not import a file called "enigma.conf"
 
 	def getItemsList(self):
 		return sorted(list(self.boxInfo.keys()))
@@ -56,8 +56,8 @@ class BoxInformation:
 	def getItem(self, item, default=None):
 		return self.boxInfo.get(item, default)
 
-	def setItem(self, item, value, immutable=False, forceOverride=False):
-		if item in self.immutableList and not forceOverride:
+	def setItem(self, item, value, immutable=False):
+		if item in self.immutableList:
 			print("[BoxInfo] Error: Item '%s' is immutable and can not be %s!" % (item, "changed" if item in self.boxInfo else "added"))
 			return False
 		if immutable and item not in self.immutableList:
@@ -65,8 +65,8 @@ class BoxInformation:
 		self.boxInfo[item] = value
 		return True
 
-	def deleteItem(self, item, forceOverride=False):
-		if item in self.immutableList and not forceOverride:
+	def deleteItem(self, item):
+		if item in self.immutableList:
 			print("[BoxInfo] Error: Item '%s' is immutable and can not be deleted!" % item)
 		elif item in self.boxInfo:
 			del self.boxInfo[item]
