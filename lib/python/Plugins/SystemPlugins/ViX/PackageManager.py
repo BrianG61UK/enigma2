@@ -87,7 +87,7 @@ class PackageManager(Screen):
 		self.upgradeable_packages = {}
 		self.Console = Console()
 		self.unwanted_extensions = ("-dbg", "-dev", "-doc", "-staticdev", "-src", "busybox")
-		self.filters = {"All": _("All"), "Installed": _("Installed"), "Upgradeable": _("Upgradeable"), "Installable": _("Installable")}
+		self.filters = {"all": _("All"), "installed": _("Installed"), "upgradeable": _("Upgradeable"), "installable": _("Installable")}
 
 		self.installedpng = LoadPixmap(cached=True, path=resolveFilename(SCOPE_CURRENT_SKIN, "icons/installed.png"))
 		self.upgradeablepng = LoadPixmap(cached=True, path=resolveFilename(SCOPE_CURRENT_SKIN, "icons/upgradeable.png"))
@@ -146,11 +146,10 @@ class PackageManager(Screen):
 	def Reboot(self, result):
 		if result:
 			self.session.open(TryQuitMainloop, retvalue=3)
-		elif result is False:  # result is None would mean the MessageBox was exited
-			if cur := self["list"].getCurrent():
-				self.list[self["list"].getIndex()] = self.buildEntryComponent(cur[0], cur[1], cur[2], "installable" if self.wasRemove else "installed")
-				self["list"].setList(self.list)
-				self.reloadPluginlist()
+		elif cur := self["list"].getCurrent():
+			self.list[self.list.index(cur)] = self.buildEntryComponent(cur[0], cur[1], cur[2], "installable" if self.wasRemove else "installed")
+			self.filterList()
+			self.reloadPluginlist()
 
 	def ipkgCallback(self, event, param):
 		if event == IpkgComponent.EVENT_ERROR:
@@ -244,14 +243,7 @@ class PackageManager(Screen):
 
 	def filterList(self):
 		if self.list:
-			if (filter := self.getCurrentFilter()) == "All":
-				self["list"].setList(self.list)
-			elif filter == "Installed":
-				self["list"].setList([x for x in self.list if x[4] is self.installedpng])
-			elif filter == "Upgradeable":
-				self["list"].setList([x for x in self.list if x[4] is self.upgradeablepng])
-			elif filter == "Installable":
-				self["list"].setList([x for x in self.list if x[4] is self.installablepng])
+			self["list"].setList(self.list if (filter := self.getCurrentFilter()) == "all" else [x for x in self.list if x[3] == filter])
 			self.updateTexts()
 
 	def getCurrentFilter(self):
