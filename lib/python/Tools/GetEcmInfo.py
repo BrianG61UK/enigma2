@@ -35,6 +35,8 @@ class GetEcmInfo:
 			return _("USB reader 5") if isLong else "USB 5"
 		elif "emulator" in current_device.lower():
 			return _("Emulator") if isLong else "EMU"
+		elif "const" in current_device.lower():
+			return _("Constcw") if isLong else "CCW"
 
 	def pollEcmData(self):
 		global data
@@ -95,14 +97,16 @@ class GetEcmInfo:
 					# CCcam
 					if using == 'fta':
 						self.textvalue = _("Free To Air")
-					elif using == 'emu':
-						self.textvalue = "EMU (%ss)" % (info.get('ecm time', '?'))
+					elif protocol == 'emu':
+						self.textvalue = "Emu (%ss)" % (info.get('ecm time', '?'))
+					elif protocol == 'constcw':
+						self.textvalue = "Constcw (%ss)" % (info.get('ecm time', '?'))
 					else:
 						if info.get('address', None):
 							address = info.get('address', '')
 						elif info.get('from', None):
-							address = info.get('from', '')
-							if "local" in address:
+							address = info.get('from', '').replace(":0", "").replace("cache", "cache ")
+							if "Local" in address:
 								from_arr = address.split("-")
 								address = from_arr[0].strip()
 								if len(from_arr) > 1:
@@ -125,17 +129,21 @@ class GetEcmInfo:
 						if info.get('address', None):
 							address += info.get('address', '')
 						elif info.get('from', None):
-							address = info.get('from', '')
-							if "local" in address:
+							address = info.get('from', '').replace(":0", "").replace("cache", "cache ")
+							if "const" in protocol.lower():
+								device = "constcw"
+							if "const" in address.lower():
+								address = ""
+							if "local" in address.lower():
 								from_arr = address.split("-")
-								address = from_arr[0].strip()
+								address = from_arr[0].strip().replace("Local", "").replace("local", "")
 								if len(from_arr) > 1:
 									device = from_arr[1].strip()
 						protocol = _('Protocol:') + ' '
 						if info.get('protocol', None):
-							protocol += info.get('protocol', '')
+							protocol += info.get('protocol', '').replace("-s2s", "-S2s").replace("ext", "Ext").replace("mcs", "Mcs").replace("Cccam", "CCcam").replace("cccam", "CCcam")
 						elif info.get('using', None):
-							protocol += info.get('using', '')
+							protocol += info.get('using', '').replace("-s2s", "-S2s").replace("ext", "Ext").replace("mcs", "Mcs").replace("Cccam", "CCcam").replace("cccam", "CCcam")
 
 						hops = _('Hops:') + ' '
 						if info.get('hops', None):
@@ -145,7 +153,31 @@ class GetEcmInfo:
 						if info.get('ecm time', None):
 							ecm += info.get('ecm time', '')
 						device_str = self.createCurrentDevice(device, True)
-						self.textvalue = address + ((" - " + device_str) if device else "") + '\n' + protocol + '  ' + hops + '  ' + ecm
+						self.textvalue = address + ((device_str) if device else "") + '\n' + protocol + '  ' + hops + '  ' + ecm
+				elif config.usage.show_cryptoinfo.value == '3':
+					# CCcam
+					if using == 'fta':
+						self.textvalue = _("Free To Air")
+					else:
+						address = ' '
+						if info.get('reader', None):
+							address += info.get('reader', '')
+						elif info.get('from', None):
+							address = info.get('from', '').replace(":0", "").replace("cache", "cache ")
+							if "const" in protocol.lower():
+								device = "constcw"
+							if "const" in address.lower():
+								address = ""
+							if "local" in address.lower():
+								from_arr = address.split("-")
+								address = from_arr[0].strip().replace("Local", "").replace("local", "")
+								if len(from_arr) > 1:
+									device = from_arr[1].strip()
+						protocol = _('Protocol:') + ' '
+						if info.get('protocol', None):
+							protocol += info.get('protocol', '').capitalize().replace("-s2s", "-S2s").replace("ext", "Ext").replace("mcs", "Mcs").replace("Cccam", "CCcam").replace("cccam", "CCcam")
+						elif info.get('using', None):
+							protocol += info.get('using', '').capitalize().replace("-s2s", "-S2s").replace("ext", "Ext").replace("mcs", "Mcs").replace("Cccam", "CCcam").replace("cccam", "CCcam")
 			else:
 				decode = info.get('decode', None)
 				if decode:
