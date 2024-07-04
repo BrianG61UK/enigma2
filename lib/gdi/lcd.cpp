@@ -412,7 +412,6 @@ void eDBoxLCD::update()
 				//                                             blue                         red                  green low                     green high
 				((unsigned int *)gb_buffer)[offset] = ((src >> 3) & 0x001F001F) | ((src << 3) & 0xF800F800) | ((src >> 8) & 0x00E000E0) | ((src << 8) & 0x07000700);
 			}
-
 			write(lcdfd, gb_buffer, _stride * res.height());
 #else
 			write(lcdfd, _buffer, _stride * res.height());
