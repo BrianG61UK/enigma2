@@ -1,7 +1,8 @@
 providers = {
-	"other":{},
+	"other": {},
 	"uk": {
 		"name": _("UK"),
+		"bouquetname": "FreeView",
 		"sections": {
 			1: _("Entertainment"),
 			100: _("High Definition"),
@@ -9,4 +10,4 @@ providers = {
 			230: _("News"),
 			260: _("BBC Interactive"),
 			670: _("Adult"),
-			700: _("Radio"),}}}
+			700: _("Radio"), }}}
