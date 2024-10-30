@@ -389,10 +389,6 @@ RESULT eStaticServiceDVBPVRInformation::getName(const eServiceReference &ref, st
 		m_parser.m_name = name;
 	}
 
-	std::string res_name = "";
-	std::string res_provider = "";
-	eServiceReference::parseNameAndProviderFromName(name, res_name, res_provider);
-	name = res_name;
 	m_parser.m_name = name;
 	if (m_parser.m_prov.empty() && !ref.prov.empty()) m_parser.m_prov = ref.prov;
 
@@ -2119,6 +2115,24 @@ std::string eDVBServicePlay::getInfoString(int w)
 		std::stringstream demux;
 		demux << h.getDemuxID();
 		return demux.str();
+	}
+	case sVideoInfo:
+	{
+		std::string videoInfo;
+		if (m_decoder)
+		{
+			char buff[100];
+			snprintf(buff, sizeof(buff), "%d|%d|%d|%d|%d|%d",
+					m_decoder->getVideoWidth(),
+					m_decoder->getVideoHeight(),
+					m_decoder->getVideoFrameRate(),
+					m_decoder->getVideoProgressive(),
+					m_decoder->getVideoAspect(),
+					m_decoder->getVideoGamma()
+				 );
+			videoInfo = buff;
+		}
+		return videoInfo;
 	}
 	default:
 		break;
