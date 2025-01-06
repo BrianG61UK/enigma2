@@ -1540,7 +1540,6 @@ class InfoBarMenu:
 			self.session.openWithCallback(self.mainMenuClosed, Setup, 'HDMIRecord')
 
 
-
 class InfoBarSimpleEventView:
 	def __init__(self):
 		pass
@@ -1785,8 +1784,9 @@ class InfoBarEPG:
 
 	def multiServiceEPG(self, type, showBouquet):
 		if self.servicelist is None:
-			from Screens.InfoBar import InfoBar 
+			from Screens.InfoBar import InfoBar
 			self.servicelist = InfoBar.instance.servicelist
+
 		def openEPG(open, bouquet, bouquets):
 			if open:
 				bouquet = bouquet or self.servicelist.getRoot()
