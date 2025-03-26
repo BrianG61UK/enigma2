@@ -1127,11 +1127,15 @@ class MovieSelection(Screen, HelpableScreen, SelectionEventInfo, InfoBarBase, Pr
 		self["waitingtext"].hide()
 
 	def LivePlay(self):
-		checkplaying = self.session.nav.getCurrentlyPlayingServiceOrGroup() and self.session.nav.getCurrentlyPlayingServiceOrGroup().toString()
-		if checkplaying and ':0:/' not in checkplaying:
-			config.movielist.curentlyplayingservice.value = checkplaying
-		if checkplaying is None or (config.movielist.curentlyplayingservice.value != checkplaying and ':0:/' not in checkplaying):
-			self.session.nav.playService(eServiceReference(config.movielist.curentlyplayingservice.value))
+		if self.session.nav.getCurrentlyPlayingServiceOrGroup():
+			if ':0:/' not in self.session.nav.getCurrentlyPlayingServiceOrGroup().toString():
+				config.movielist.curentlyplayingservice.setValue(self.session.nav.getCurrentlyPlayingServiceOrGroup().toString())
+		checkplaying = self.session.nav.getCurrentlyPlayingServiceOrGroup()
+		if checkplaying:
+			checkplaying = checkplaying.toString()
+
+		if checkplaying is None or (config.movielist.curentlyplayingservice.value != checkplaying and ':0:/' not in self.session.nav.getCurrentlyPlayingServiceOrGroup().toString()):
+			self.session.nav.playService(eServiceReference(config.movielist.curentlyplayingservice.value), forceRestart=True)
 
 		self.LivePlayTimer.stop()
 
@@ -1195,9 +1199,9 @@ class MovieSelection(Screen, HelpableScreen, SelectionEventInfo, InfoBarBase, Pr
 			if what == 3:
 				last = pts
 				break
-		else:
-			# no resume, jump to start of program (first marker)
-			last = cuts[0][0]
+			else:
+				# no resume, jump to start of program (first marker)
+				last = cuts[0][0]
 		self.doSeekTo = last
 		self.callLater(self.doSeek)
 
@@ -1315,8 +1319,6 @@ class MovieSelection(Screen, HelpableScreen, SelectionEventInfo, InfoBarBase, Pr
 				from Screens.InfoBarGenerics import resumePointsInstance
 				resumePointsInstance.setResumePoint(MoviePlayer.instance.session)
 			self.session.nav.stopService()
-			if config.movielist.show_live_tv_in_movielist.value:
-				self.LivePlayTimer.start(100)
 			self.filePlayingTimer.start(100)
 			return
 		elif self.list.playInForeground:
@@ -1327,9 +1329,9 @@ class MovieSelection(Screen, HelpableScreen, SelectionEventInfo, InfoBarBase, Pr
 				resumePointsInstance.setResumePoint(MoviePlayer.instance.session)
 				self.closeMoviePlayerOnExit = True
 			self.session.nav.stopService()
-			if config.movielist.show_live_tv_in_movielist.value:
-				self.LivePlayTimer.start(100)
 			self.filePlayingTimer.start(100)
+		if config.movielist.show_live_tv_in_movielist.value:
+			self.LivePlayTimer.start(100)
 
 	def toggleMark(self):
 		self.list.toggleMark()
@@ -1546,29 +1548,31 @@ class MovieSelection(Screen, HelpableScreen, SelectionEventInfo, InfoBarBase, Pr
 
 	def sortBy(self, newType):
 		print("[MovieSelection] SORTBY:", newType)
-		self.settings["moviesort"] = newType
-		# If we are using per-directory sort methods then set it now...
-		#
-		if config.movielist.settings_per_directory.value:
-			self.saveLocalSettings()
-		else:
-			# ..otherwise, if we are setting permanent sort methods, save it,
-			# while, for temporary sort methods, indicate to MovieList.py to
-			# use a temporary sort override.
+		if newType < MovieList.TRASHSORT_SHOWRECORD:
+			self.settings["moviesort"] = newType
+			# If we are using per-directory sort methods then set it now...
 			#
-			if config.movielist.perm_sort_changes.value:
-				config.movielist.moviesort.setValue(newType)
-				config.movielist.moviesort.save()
+			if config.movielist.settings_per_directory.value:
+				self.saveLocalSettings()
 			else:
-				self["list"].temp_sort = newType
-		self.setSortType(newType)
-		# Unset specific trash-sorting if other sort chosen while in Trash
-		if MovieList.InTrashFolder:
-			config.usage.trashsort_deltime.value = "no"
-		if newType == MovieList.TRASHSORT_SHOWRECORD:
-			config.usage.trashsort_deltime.value = "show record time"
-		elif newType == MovieList.TRASHSORT_SHOWDELETE:
-			config.usage.trashsort_deltime.value = "show delete time"
+				# ..otherwise, if we are setting permanent sort methods, save it,
+				# while, for temporary sort methods, indicate to MovieList.py to
+				# use a temporary sort override.
+				#
+				if config.movielist.perm_sort_changes.value:
+					config.movielist.moviesort.setValue(newType)
+					config.movielist.moviesort.save()
+				else:
+					self["list"].temp_sort = newType
+			self.setSortType(newType)
+			# Unset specific trash-sorting if other sort chosen while in Trash
+			if MovieList.InTrashFolder:
+				config.usage.trashsort_deltime.value = "no"
+		else:
+			if newType == MovieList.TRASHSORT_SHOWRECORD:
+				config.usage.trashsort_deltime.value = "show record time"
+			elif newType == MovieList.TRASHSORT_SHOWDELETE:
+				config.usage.trashsort_deltime.value = "show delete time"
 		self.reloadList()
 
 	def showDescription(self, newType):
@@ -1594,12 +1598,6 @@ class MovieSelection(Screen, HelpableScreen, SelectionEventInfo, InfoBarBase, Pr
 			return
 
 		self.saveconfig()
-		# This is needed for DVB subtitles to show after stop playing recording & exit
-		from Screens.InfoBar import InfoBar
-		infobar = InfoBar.instance
-		if self.session.nav.getCurrentlyPlayingServiceReference():
-			if not infobar.timeshiftEnabled() and ':0:/' not in self.session.nav.getCurrentlyPlayingServiceReference().toString():
-				self.session.nav.stopService()
 		self.close(None)
 
 	def saveconfig(self):
@@ -1675,6 +1673,8 @@ class MovieSelection(Screen, HelpableScreen, SelectionEventInfo, InfoBarBase, Pr
 
 	def getPixmapSortIndex(self, which):
 		index = int(which)
+		if (index == MovieList.TRASHSORT_SHOWRECORD) or (index == MovieList.TRASHSORT_SHOWDELETE):
+			index = MovieList.SORT_RECORDED
 		return index - 1
 
 	def sortbyMenuCallback(self, choice):
