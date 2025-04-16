@@ -448,7 +448,8 @@ class EPGSelectionBase(Screen, HelpableScreen):
 		timer = self.session.nav.RecordTimer.getTimerForEvent(service, event)
 		self.setActionButtonText("addEditTimer", _("Change Timer") if timer is not None else _("Add Timer"))
 		self.setActionButtonText("addEditAutoTimer", _("Edit AutoTimer") if timer is not None and timer.autoTimerId else _("Add AutoTimer"))
-		self.setupKeyPlayButtonDisplay(event.getBeginTime(), service)
+		if "key_play" in self:  # protect against plugins that inherit this class but do not instanciate it
+			self.setupKeyPlayButtonDisplay(event.getBeginTime(), service)
 
 	def closeEventViewDialog(self):
 		if self.eventviewDialog:
