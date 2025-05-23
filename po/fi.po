@@ -4,8 +4,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: enigma2\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-05-18 11:48+0300\n"
-"PO-Revision-Date: 2025-05-18 15:09+0300\n"
+"POT-Creation-Date: 2025-05-20 13:06+0300\n"
+"PO-Revision-Date: 2025-05-20 16:13+0300\n"
 "Last-Translator: Orlandox\n"
 "Language-Team: timoj/Kojo/Samzam/Orlandox\n"
 "Language: fi\n"
@@ -1004,7 +1004,7 @@ msgstr "%s tiedostoa ei voi nimetä massana"
 
 #, python-format
 msgid "%s is also enabled for autofs network"
-msgstr "%s on myös käytössä autofs-verkkossa"
+msgstr "%s on myös käytössä autofs-verkossa"
 
 #. TRANSLATORS: The satellite with name '%s' is no longer used after a configuration change. The user is asked whether or not the satellite should be deleted.
 #, python-format
@@ -5020,11 +5020,11 @@ msgstr "Tunnista seuraavat vastaanottimet ennen valmiustilaa"
 msgid "Detect programs split by news bulletins. Choose the maximum duration in minutes to consider as a bulletin, or 0 to disable."
 msgstr "Tunnista ohjelman jako uutisten tiedotteilla. Valitse maksimi tiedotteen kesto minuuteissa tai 0 poistaaksesi käytöstä."
 
-msgid "Detected devices:"
-msgstr "Tunnistetut laitteet:"
+msgid "Detected devices"
+msgstr "Tunnistetut laitteet"
 
-msgid "Detected tuners:"
-msgstr "Tunnistetut virittimet:"
+msgid "Detected tuners"
+msgstr "Tunnistetut virittimet"
 
 msgid "Detective"
 msgstr "Etsivä"
@@ -9632,8 +9632,8 @@ msgstr "Verkon palvelimet"
 msgid "Network scan"
 msgstr "Verkkohaku"
 
-msgid "Network servers:"
-msgstr "Verkon palvelimet:"
+msgid "Network servers"
+msgstr "Verkon palvelimet"
 
 msgid "Network settings"
 msgstr "Verkon asetukset"
@@ -15151,7 +15151,7 @@ msgstr ""
 "Suomenkielinen käännös: timoj, Kojo, Samzam, Orlandox\n"
 "\n"
 "Ylläpito : Orlandox\n"
-"--- 14.05.2025 ---\n"
+"--- 20.05.2025 ---\n"
 "\n"
 "http://www.huoltovalikko.com"
 
