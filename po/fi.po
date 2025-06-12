@@ -4,8 +4,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: enigma2\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-05-24 18:45+0300\n"
-"PO-Revision-Date: 2025-06-06 07:05+0300\n"
+"POT-Creation-Date: 2025-06-11 12:29+0300\n"
+"PO-Revision-Date: 2025-06-11 19:42+0300\n"
 "Last-Translator: Orlandox\n"
 "Language-Team: timoj/Kojo/Samzam/Orlandox\n"
 "Language: fi\n"
@@ -109,6 +109,22 @@ msgstr " Varoitus: valitulle virittimelle ei pidä käyttää SCR Unicable tyypp
 
 msgid " and"
 msgstr " ja"
+
+msgid " cannot decode "
+msgstr " ei pysty purkamaan "
+
+msgid " does not have a working internet connection."
+msgstr " ei ole toimivaa internet-yhteyttä."
+
+msgid ""
+" is about to create a full image backup, this can take about 6 minutes to complete.\n"
+"Do you want to allow this?"
+msgstr ""
+" aikoo tehdä täyden varmuuskopion, ja se voi kestää noin kuusi minuuttia.\n"
+"Sallitko tämän?"
+
+msgid " streams!"
+msgstr " lähteitä!"
 
 msgid " unicable LNB input of rotor"
 msgstr " unicable LNB roottorin tulo"
@@ -2305,9 +2321,8 @@ msgstr ""
 msgid "Are you sure you want to save the EPG Cache to:\n"
 msgstr "Haluatko varmasti tallentaa EPG:n tänne:\n"
 
-#, python-format
-msgid "Are you sure you want to update your %s %s?"
-msgstr "Haluatko päivittää %s %s:n?"
+msgid "Are you sure you want to update your "
+msgstr "Haluatko varmasti päivittää laitteesi "
 
 msgid "Argentina"
 msgstr "Argentiina"
@@ -5402,9 +5417,8 @@ msgstr "Jatketaanko toistoa?"
 msgid "Do you want to update the package:\n"
 msgstr "Haluatko päivittää ohjelmapaketin:\n"
 
-#, python-format
-msgid "Do you want to update your %s %s?"
-msgstr "Haluatko päivittää %s %s:n?"
+msgid "Do you want to update your "
+msgstr "Haluatko päivittää laitteesi "
 
 msgid "Docudrama"
 msgstr "Draama"
@@ -11069,9 +11083,6 @@ msgstr "Lisäosa-selaimen asetukset"
 msgid "Plugin install"
 msgstr "Lisäosan asentaminen"
 
-msgid "Plugin listing failed - e. g. wrong backup destination or no space left on backup device."
-msgstr "Lisäosien listaus epäonnistui - väärä varmuuskopion sijainti tai levytila on lopussa."
-
 msgid "Plugins"
 msgstr "Lisäosat"
 
@@ -15151,7 +15162,7 @@ msgstr ""
 "Suomenkielinen käännös: timoj, Kojo, Samzam, Orlandox\n"
 "\n"
 "Ylläpito : Orlandox\n"
-"--- 06.06.2025 ---\n"
+"--- 11.06.2025 ---\n"
 "\n"
 "http://www.huoltovalikko.com"
 
@@ -15565,9 +15576,8 @@ msgstr ""
 "Kiintolevyn osiolla ei välttämättä ole riittävästi tilaa.\n"
 "Haluatko varmasti jatkaa?"
 
-#, python-format
-msgid "This %s %s cannot decode %s streams!"
-msgstr "Tämä %s %s ei pysty purkamaan %s lähteitä!"
+msgid "This "
+msgstr "Tämä "
 
 msgid "This DVD RW medium is already formatted - reformatting will erase all content on the disc."
 msgstr "Tämä DVD-RW levy on jo alustettu - uudelleenalustaminen poistaa kaiken sisällön levyltä."
@@ -16449,9 +16459,8 @@ msgid_plural "Update completed, %d packages were installed."
 msgstr[0] "Päivitys valmis, %d paketti asennettiin."
 msgstr[1] "Päivitys valmis, %d pakettia asennettiin."
 
-#, python-format
-msgid "Update failed. Your %s %s does not have a working internet connection."
-msgstr "Päivitys epäonnistui. %s %s:llä ei ole toimivaa internet-yhteyttä."
+msgid "Update failed. Your "
+msgstr "Päivitys epäonnistui. Laitteellasi "
 
 msgid "Update has completed."
 msgstr "Päivitys on valmis."
@@ -17727,6 +17736,9 @@ msgstr "Sinulla on ajansiirto päällä, haluatko sulkea ajansiirron?"
 msgid "You seem to be in timeshift, Do you want to leave timeshift? Streams & IPTV not fully supported!"
 msgstr "Sinulla on ajansiirto päällä, haluatko sulkea ajansiirron? Streamit ja IPTV eivät ole täysin tuetut!"
 
+msgid "Your "
+msgstr "Laitteesi "
+
 #, python-format
 msgid "Your %s %s could not connect to the plugin feeds at this time. Please try using the Backup manager to restore plugins later."
 msgstr "Sinun %s %s ei saa yhteyttä lisäosa-syötteisiin. Yritä myöhemmin palauttaa lisäosat käyttäen varmuuskopioiden hallinta-työkalua."
@@ -17742,14 +17754,6 @@ msgstr "Sinun %s %s ei ole kytketty verkkoon, tarkista verkkoasetukset sekä ver
 #, python-format
 msgid "Your %s %s has no network access, please check your network settings and make sure you have network cable connected and try again."
 msgstr "Sinun %s %s ei ole kytketty verkkoon, tarkista verkkoasetukset sekä verkkokaapeli ja yritä uudelleen."
-
-#, python-format
-msgid ""
-"Your %s %s is about to create a full image backup, this can take about 6 minutes to complete.\n"
-"Do you want to allow this?"
-msgstr ""
-"Sinun %s %s aikoo tehdä täyden varmuuskopion, ja se voi kestää noin kuusi minuuttia.\n"
-"Sallitko tämän?"
 
 #, python-format
 msgid ""
@@ -17810,10 +17814,6 @@ msgstr "%s %s käynnistyy uudelleen Palautustilaan"
 #, python-format
 msgid "Your %s %s is shutting down"
 msgstr "%s %s sammutetaan"
-
-#, python-format
-msgid "Your %s %s might be unusable now. Please consult the manual for further assistance before rebooting your %s %s."
-msgstr "%s %s saattaa olla nyt käyttökelvoton. Lue käsikirjasta lisäohjeita ennen kuin uudelleenkäynnistät %s %s:n."
 
 #, python-format
 msgid ""
@@ -17920,6 +17920,9 @@ msgstr "Vastaanottimessa ei ole internet-yhteyttä"
 
 msgid "Your receiver is not connected to the internet"
 msgstr "Vastaanotin ei ole kytketty internettiin"
+
+msgid "Your receiver might be unusable now. Please consult the manual for further assistance before rebooting your "
+msgstr "Laitteesi saattaa olla nyt käyttökelvoton. Lue käsikirjasta lisäohjeita ennen kuin uudelleen käynnistät laitteesi "
 
 msgid ""
 "Your wireless LAN internet connection could not be started!\n"
@@ -18410,6 +18413,9 @@ msgstr "Lopeta leikkaus tähän"
 msgid "ene"
 msgstr "ene"
 
+msgid "enter 'Yes' to reboot new image or 'No' to return to Enigma2"
+msgstr "valitse 'Kyllä' käynnistääksesi uuden imagen tai 'Ei' palataksesi Enigma2:een"
+
 msgid "entertainment (10-16 year old)"
 msgstr "viihde (10-16 vuotiaat)"
 
@@ -18571,6 +18577,10 @@ msgstr "käsityö"
 
 msgid "handled"
 msgstr "hoidettu"
+
+#, python-format
+msgid "has successfully flashed slot %s, "
+msgstr "on onnistuneesti flashännyt paikan %s, "
 
 msgid "hdr10"
 msgstr "hdr10"
