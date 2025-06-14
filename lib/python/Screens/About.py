@@ -393,7 +393,7 @@ class Devices(AboutBase):
 					for count in range(1, keyRange):
 						hddKey = "%s" % hddKey1 + "%s" % str(count) if hddKey1[0:-1] in ("/dev/sd", "/dev/mmcblk1") else hddKey1
 						if hddKey in mountdict.keys():
-							freeline = _("%s ") % hddKey + _("%s   ") % mountdict[hddKey][1] + "\n  " + _("Mount: %s  ") % mountdict[hddKey][5] + _("Used: %s  ") % mountdict[hddKey][2] + _("Free: %s ") % mountdict[hddKey][3]
+							freeline = "%s " % hddKey + "%s   " % mountdict[hddKey][1] + "\n  " + _("Mount: %s  ") % mountdict[hddKey][5] + _("Used: %s  ") % mountdict[hddKey][2] + _("Free: %s ") % mountdict[hddKey][3]
 							line = ""
 							for count in range(0, hddDescLen):
 								line += "%s " % hddDescription[count]
