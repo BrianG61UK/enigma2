@@ -1,13 +1,13 @@
-from Screens.Screen import Screen
-from Screens.HelpMenu import HelpableScreen
-from Screens.MessageBox import MessageBox
+from Components.ActionMap import HelpableActionMap
+from Components.config import config, ConfigYesNo, getConfigListEntry, ConfigSelection
+from Components.ConfigList import ConfigListScreen
 from Components.InputDevice import iInputDevices, iRcTypeControl
 from Components.Sources.StaticText import StaticText
 from Components.Sources.List import List
-from Components.config import config, ConfigYesNo, getConfigListEntry, ConfigSelection
-from Components.ConfigList import ConfigListScreen
-from Components.ActionMap import HelpableActionMap
 from Components.SystemInfo import BOXTYPE, DISPLAYBRAND, MACHINENAME
+from Screens.Screen import Screen
+from Screens.HelpMenu import HelpableScreen
+from Screens.MessageBox import MessageBox
 from Tools.Directories import resolveFilename, SCOPE_CURRENT_SKIN
 from Tools.LoadPixmap import LoadPixmap
 
@@ -244,7 +244,8 @@ class RemoteControlType(ConfigListScreen, Screen):
 		("25", _("Zgemma H9/I55Plus old Model")),
 		("26", _("Protek 4K UHD/HD61")),
 		("27", _("HD60")),
-		("28", _("H7/H9/H9COMBO/H10 new Model"))
+		("28", _("I55SE/H7/H17/H9/H9SE/H9COMBO/H9COMBOSE/H10/H11 new Model")),
+		("30", _("PULSe 4K/4K Mini"))
 	]
 
 	defaultRcList = [
@@ -284,9 +285,13 @@ class RemoteControlType(ConfigListScreen, Screen):
 		("hd61", 26),
 		("hd60", 27),
 		("h7", 28),  # new model
+		("h17", 28),
 		("h9", 28),  # new model
 		("h9combo", 28),
-		("h10", 28)
+		("h10", 28),
+		("h11", 28),
+		("pulse4k", 30),
+		("pulse4kmini", 30)
 	]
 
 	def __init__(self, session):
@@ -313,7 +318,6 @@ class RemoteControlType(ConfigListScreen, Screen):
 				self.defaultRcType = x[1]
 				break
 		# If there is none in the list, use the current value...
-		#
 		# print("[InputDevice] self.defaultRcType 1 = {}".format(self.defaultRcType))
 		if self.defaultRcType == 0:
 			self.defaultRcType = iRcTypeControl.readRcType()
