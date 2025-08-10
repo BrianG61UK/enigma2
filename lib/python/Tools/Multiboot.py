@@ -1,5 +1,6 @@
 from datetime import datetime
 import glob
+import struct
 import subprocess
 import tempfile
 from os import path, rmdir, rename, sep, stat
@@ -50,10 +51,9 @@ def getMultibootslots():
 						if Creator in ("openvix", "openbh"):
 							copyfile("/etc/init.d/kexec-multiboot-recovery", dest)
 				# print(f"[multiboot][getMultibootslots]1 bootargs?: {path.exists('/sys/firmware/devicetree/base/chosen/bootargs')}")
-				SystemInfo["MBbootdevice"] = device
-				device2 = device.rsplit("/", 1)[1]
-				# print(f"[Multiboot][[getMultibootslots]2 *** Bootdevice found: {device2} CHKROOTMB:{CHKROOTMB}")
-				SystemInfo["BootDevice"] = "chkrootmb" if CHKROOTMB else device2
+				SystemInfo["MBbootdevice"] = resolveDevice(device)  # used in SystemInfo
+				SystemInfo["BootDevice"] = SystemInfo["MBbootdevice"].rsplit("/", 1)[1]  # used by About
+				print(f"[Multiboot][[getMultibootslots]2 *** Bootdevice found: {SystemInfo['BootDevice']} CHKROOTMB:{CHKROOTMB} MBbootdevice:{SystemInfo['MBbootdevice']}")
 				if path.exists("/sys/firmware/devicetree/base/chosen/bootargs") or CHKROOTMB:  # check validity for multiboot
 					for file in glob.glob(path.join(tmpname, "STARTUP_*")):
 						slotnumber = file.rsplit("_", 3 if "BOXMODE" in file else 1)[1]
@@ -65,7 +65,6 @@ def getMultibootslots():
 							SystemInfo["AndroidMode"] = True
 							continue
 						if "STARTUP_RECOVERY" in file:
-							SystemInfo["RecoveryMode"] = True
 							slotnumber = "0"
 							SystemInfo["RecoveryMode"] = True if BOXTYPE != "gbquad4kpro" else False
 						if "STARTUP_FLASH" in file:
@@ -98,9 +97,9 @@ def getMultibootslots():
 									if not UBIMB:
 										SystemInfo["HasMultibootMTD"] = slot.get("mtd")
 										SystemInfo["HasMultibootFlags"] = path.exists("/dev/block/by-name/flag")
-										if not SystemInfo["HasKexecMultiboot"] and "sda" in slot["root"]:		# Not Kexec Vu+ receiver -- sf8008 type receiver with sd card, reset value as SD card slot has no rootsubdir
-											slot["rootsubdir"] = None
-											slot["slotType"] = "SDCARD"
+									if not SystemInfo["HasKexecMultiboot"] and not UBIMB and "sda" in slot["root"]:		# Not Kexec Vu+ receiver -- sf8008 type receiver with sd card, reset value as SD card slot has no rootsubdir
+										slot["rootsubdir"] = None
+										slot["slotType"] = "SDCARD"
 									elif "STARTUP_RECOVERY" not in file:
 										SystemInfo["HasRootSubdir"] = slot.get("rootsubdir")
 									if "kernel" not in slot.keys():
@@ -113,7 +112,7 @@ def getMultibootslots():
 							else:
 								continue
 				else:  # kernel corruption set corruption flag
-					print(f"[multiboot][getMultibootslots]3 bootargs?: {path.exists("/sys/firmware/devicetree/base/chosen/bootargs")}")
+					# print(f"[multiboot][getMultibootslots]3 bootargs?: {path.exists("/sys/firmware/devicetree/base/chosen/bootargs")}")
 					SystemInfo["resetMBoot"] = True
 					bootslots = {}
 			Console(binary=True).ePopen(f"umount {tmpname}")
@@ -163,6 +162,13 @@ def getUUIDtoSD(UUID):  # returns None on failure
 				return line.split(":")[0].strip()
 	else:
 		return None
+
+
+def resolveDevice(devicepath):
+	if path.islink(devicepath):
+		return path.realpath(devicepath)
+	else:
+		return devicepath
 
 
 def GetCurrentImageMode():
