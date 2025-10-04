@@ -139,10 +139,10 @@ class ItaClassifications(dict):
 # If there is no matching country then the default ETSI should be selected.
 
 countries = {
-	"ETSI": (ETSIClassifications(), lambda age: (_("bc%d") % age, _("Rating defined by broadcaster - %d") % age, "ratings/ETSI-na.png")),
-	"AUS": (AusClassifications(), lambda age: (_("BC%d") % age, _("Rating defined by broadcaster - %d") % age, "ratings/AUS-na.png")),
-	"GBR": (GBrClassifications(), lambda age: (_("BC%d") % age, _("Rating defined by broadcaster - %d") % age, "ratings/GBR-na.png")),
-	"ITA": (ItaClassifications(), lambda age: (_("BC%d") % age, _("Rating defined by broadcaster - %d") % age, "ratings/ITA-na.png"))
+	"ETSI": (ETSIClassifications(), lambda age: (_("bc%d") % age, _("Rating defined by broadcaster - %d") % age, "ratings/ETSI-na.png", 0x222222)),
+	"AUS": (AusClassifications(), lambda age: (_("BC%d") % age, _("Rating defined by broadcaster - %d") % age, "ratings/AUS-na.png", 0x222222)),
+	"GBR": (GBrClassifications(), lambda age: (_("BC%d") % age, _("Rating defined by broadcaster - %d") % age, "ratings/GBR-na.png", 0x222222)),
+	"ITA": (ItaClassifications(), lambda age: (_("BC%d") % age, _("Rating defined by broadcaster - %d") % age, "ratings/ITA-na.png", 0x222222))
 }
 
 
@@ -419,7 +419,7 @@ class EventName(Converter):
 				rating = c[self.RATNORMAL].get(age, c[self.RATDEFAULT](age))
 				ageText = rating[self.RATSHORT].strip().replace("+", "")
 				color = rating[self.RATCOLOR]
-				return "%s;%s" % (ageText, hex(color))
+				return f"{ageText};#{color:08X}"
 		elif self.type == self.FORMAT_STRING:
 			begin = event.getBeginTime()
 			end = begin + event.getDuration()
