@@ -269,8 +269,8 @@
 
 	<!-- CHOICEBOX -->
 	<screen name="ChoiceBoxSummary" position="0,0" size="800,480">
-		<widget source="parent.summary_list" render="Label" position="40,50" size="720,110" foregroundColor="white" font="FdLcD;85" halign="center" valign="center" zPosition="2" />
-		<widget source="parent.summary_selection" render="Label" position="40,200" size="720,160" foregroundColor="white" font="FdLcDLight;65" halign="center" valign="top" zPosition="2" />
+		<widget source="parent.Title" render="Label" position="40,20" size="720,100" foregroundColor="white" font="FdLcD;85" halign="center" valign="center" zPosition="2" />
+		<widget source="parent.summary_selection" render="Label" position="40,200" size="720,160" foregroundColor="white" font="FdLcDLight;60" halign="center" valign="top" zPosition="2" />
 	</screen>
 
 	<!-- IMDB -->
@@ -370,6 +370,7 @@
 	<screen name="PluginBrowserSummary" position="0,0" size="800,480"> 
 		<panel name="LCDTitle2" />
 		<widget source="entry" render="Label" position="40,200" size="720,160" foregroundColor="white" font="FdLcDLight;65" halign="center" valign="top" zPosition="2" />
+		<widget source="desc" render="Label" position="40,360" size="720,160" foregroundColor="white" font="FdLcDLight;65" halign="center" valign="top" zPosition="2" />
 	</screen>
 
 	<!-- SETUP -->
@@ -420,16 +421,6 @@
 		</widget>
 	</screen>
 
-	<!-- ExtensionsList -->
-	<screen name="ExtensionsListSummary" position="0,0" size="800,480">
-		<widget source="parent.Title" render="Label" position="40,20" size="720,376" font="FdLcD;70" halign="center" valign="center" />
-	</screen> 
-
-	<!-- EPG -->
-	<screen name="EPGExtensionsListSummary" position="0,0" size="800,480">
-		<widget source="parent.Title" render="Label" position="40,20" size="720,250" font="FdLcD;80" halign="center" valign="center" foregroundColor="white" />
-	</screen>
-
 	<!-- TimerEditListSummary -->
 	<screen name="TimerEditListSummary" position="0,0" size="800,480">
 		<widget source="parent.Title" render="Label" position="0,0" size="e,90" font="FdLcD;85" halign="center" valign="center" noWrap="1" />
@@ -472,6 +463,7 @@
 		</widget>
 	</screen>
 
+	<!-- CommitInfo -->
 	<screen name="CommitInfoSummary" position="fill">
 		<widget source="Title" render="Label" position="40,50" size="720,100" foregroundColor="white" font="FdLcD;85" halign="center" valign="center" zPosition="2" />
 		<widget source="commitText" render="Label" position="20,180" size="760,300" font="FdLcDLight;45" halign="center" zPosition="2" />
@@ -482,5 +474,44 @@
 		<widget source="parent.Title" render="Label" position="40,50" size="720,100" foregroundColor="white" font="FdLcD;85" halign="center" valign="center" zPosition="2" />
 		<widget source="status_summary" render="Label" position="40,180" size="720,130" zPosition="1" font="FdLcDLight;55" halign="center" valign="center" />
 		<widget source="autostartstatus_summary" render="Label" position="40,320" size="720,140" font="FdLcDLight;50" halign="center" valign="center" transparent="1" />
+	</screen>
+
+	<!-- InputDeviceSelection -->
+	<screen name="InputDeviceSelectionSummary" position="fill">
+		<widget source="parent.Title" render="Label" position="40,50" size="720,100" foregroundColor="white" font="FdLcD;85" halign="center" valign="center" zPosition="2" />
+		<widget source="parent.list" render="Listbox" position="40,190" size="720,160" scrollbarMode="showNever">
+			<convert type="TemplatedMultiContent">
+				{"template": [
+					MultiContentEntryText(pos = (0,0), size = (720,160), flags = RT_HALIGN_CENTER|RT_VALIGN_CENTER|RT_WRAP, text = 1), # index 1 is the interfacename
+				],
+				"fonts": [gFont("FdLcDLight",60),],
+				"itemHeight": 160
+				}
+			</convert>
+		</widget>
+	</screen>
+
+	<!-- PowerTimerEditList -->
+	<screen name="PowerTimerEditListSummary" position="fill">
+		<widget source="parent.Title" render="Label" position="40,50" size="720,100" foregroundColor="white" font="FdLcD;85" halign="center" valign="center" zPosition="2" />
+		<widget source="timertype" render="Label" position="20,150" size="760,70" font="FdLcD;60" noWrap="1" />
+		<widget source="time" render="Label" position="20,240" size="760,60" font="FdLcD;54" transparent="1" />
+		<widget source="duration" render="Label" position="20,320" size="760,60" font="FdLcD;50" halign="left" transparent="1" />
+		<widget source="state" render="Label" position="20,320" size="760,60" font="FdLcD;50" halign="right" transparent="1" />
+	</screen>
+
+	<!-- ServiceInfo -->
+	<screen name="ServiceInfoSummary" position="fill">
+		<widget source="info" render="Label" position="20,20" size="760,440" font="FdLcD;48" noWrap="1" />
+	</screen>
+
+	<!-- EventView -->
+	<screen name="EventViewSummary" position="fill">
+		<panel name="EventViewSimpleSummary" />
+	</screen>
+
+	<screen name="EventViewSimpleSummary" position="fill">
+		<widget source="parent.Title" render="Label" position="40,20" size="720,100" foregroundColor="white" font="FdLcD;85" halign="center" valign="center" zPosition="2" />
+		<widget source="parent.summary_description" render="Label" position="20,140" size="720,320" font="FdLcD;54" />
 	</screen>
 </skin>
