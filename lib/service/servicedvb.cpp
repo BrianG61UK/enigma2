@@ -1344,14 +1344,6 @@ void eDVBServicePlay::serviceEvent(int event)
 	case eDVBServicePMTHandler::eventHBBTVInfo:
 		m_event((iPlayableService*)this, evHBBTVInfo);
 		break;
-	case eDVBServicePMTHandler::eventCIConnected:
-		if (m_csa_session && m_csa_session->isActive())
-		{
-			eDebug("[eDVBServicePlay] CI module connected - deactivating SoftCSA to save resources");
-			m_csa_session->stopECMMonitor();
-			m_csa_session->forceDeactivate();
-		}
-		break;
 	}
 }
 
@@ -4206,6 +4198,11 @@ void eDVBServicePlay::setupSpeculativeDescrambling()
 	// Connect to SoftDecoder's audio PID selection signal
 	m_soft_decoder->m_audio_pid_selected.connect(
 		sigc::mem_fun(*this, &eDVBServicePlay::onSoftDecoderAudioPidSelected));
+
+	// Suppress SoftCSA activation when CI module handles decryption
+	m_csa_session->shouldSuppressActivation = [this]() {
+		return m_service_handler.isCiConnected();
+	};
 
 	// Connect to session's activated signal for decoder handover
 	m_csa_session->activated.connect(
