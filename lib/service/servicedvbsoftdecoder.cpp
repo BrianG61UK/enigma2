@@ -4,6 +4,7 @@
 #include <lib/dvb/demux.h>
 #include <lib/base/eerror.h>
 #include <lib/base/esimpleconfig.h>
+#include <lib/base/cfile.h>
 #include <sys/ioctl.h>
 #include <fcntl.h>
 
@@ -26,13 +27,9 @@ eDVBSoftDecoder::eDVBSoftDecoder(eDVBServicePMTHandler& source_handler,
 	, m_stream_stalled(false)
 	, m_paused(false)
 	, m_last_health_check(0)
-	, m_audio_reset_original_track(0)
-	, m_current_audio_index(0)
 {
-	m_audio_reset_timer = eTimer::create(eApp);
-	CONNECT(m_audio_reset_timer->timeout, eDVBSoftDecoder::audioResetToggle);
-	m_audio_restore_timer = eTimer::create(eApp);
-	CONNECT(m_audio_restore_timer->timeout, eDVBSoftDecoder::audioResetRestore);
+	m_buffer_timer = eTimer::create(eApp);
+	CONNECT(m_buffer_timer->timeout, eDVBSoftDecoder::onBufferTimerExpired);
 	eDebug("[eDVBSoftDecoder] Created for decoder %d", decoder_index);
 }
 
@@ -43,10 +40,8 @@ eDVBSoftDecoder::~eDVBSoftDecoder()
 		m_start_timer->stop();
 	if (m_health_timer)
 		m_health_timer->stop();
-	if (m_audio_reset_timer)
-		m_audio_reset_timer->stop();
-	if (m_audio_restore_timer)
-		m_audio_restore_timer->stop();
+	if (m_buffer_timer)
+		m_buffer_timer->stop();
 	if (m_first_cw_conn.connected())
 		m_first_cw_conn.disconnect();
 
@@ -91,7 +86,7 @@ void eDVBSoftDecoder::onFirstCwReceived()
 	if (m_decoder_started)
 		return;  // Already started
 
-	eDebug("[eDVBSoftDecoder] First CW received - starting decoder with DVR wait");
+	eDebug("[eDVBSoftDecoder] First CW received - starting decoder");
 
 	// Stop timer
 	if (m_start_timer)
@@ -101,7 +96,7 @@ void eDVBSoftDecoder::onFirstCwReceived()
 	if (m_first_cw_conn.connected())
 		m_first_cw_conn.disconnect();
 
-	startDecoderWithDvrWait();
+	startDecoderOrBuffer();
 }
 
 void eDVBSoftDecoder::onWaitForFirstDataTimeout()
@@ -109,35 +104,36 @@ void eDVBSoftDecoder::onWaitForFirstDataTimeout()
 	if (m_decoder_started)
 		return;  // Already started
 
-	eWarning("[eDVBSoftDecoder] CW timeout - starting decoder with DVR wait anyway");
+	eWarning("[eDVBSoftDecoder] CW timeout - starting decoder anyway");
 
 	// Disconnect signal
 	if (m_first_cw_conn.connected())
 		m_first_cw_conn.disconnect();
 
-	startDecoderWithDvrWait();
+	startDecoderOrBuffer();
 }
 
-void eDVBSoftDecoder::startDecoderWithDvrWait()
+void eDVBSoftDecoder::startDecoderOrBuffer()
+{
+	if (int bufferTime = eSimpleConfig::getInt("config.misc.softcsa.bufferTime", 0); bufferTime > 0)
+	{
+		eDebug("[eDVBSoftDecoder] Pre-buffering %dms before decoder start", bufferTime);
+		m_buffer_timer->start(bufferTime, true);
+		return;
+	}
+	startDecoder();
+}
+
+void eDVBSoftDecoder::onBufferTimerExpired()
+{
+	eDebug("[eDVBSoftDecoder] Pre-buffer complete - starting decoder");
+	startDecoder();
+}
+
+void eDVBSoftDecoder::startDecoder()
 {
 	if (m_decoder_started)
 		return;
-
-	// Safety check: m_record must exist
-	if (!m_record)
-	{
-		eWarning("[eDVBSoftDecoder] startDecoderWithDvrWait: m_record is NULL!");
-		return;
-	}
-
-	// Wait for DVR data (blocking)
-	int wait_timeout = eSimpleConfig::getInt("config.misc.softcsa.waitForDataTimeout", 800);
-	eDebug("[eDVBSoftDecoder] Waiting for DVR data (timeout=%dms)", wait_timeout);
-
-	if (!m_record->waitForFirstData(wait_timeout))
-	{
-		eWarning("[eDVBSoftDecoder] DVR timeout - starting decoder anyway");
-	}
 
 	// Start decoder
 	eDebug("[eDVBSoftDecoder] Starting decoder");
@@ -200,10 +196,6 @@ void eDVBSoftDecoder::stop()
 		m_health_timer->stop();
 		m_health_timer = nullptr;
 	}
-	if (m_audio_reset_timer)
-		m_audio_reset_timer->stop();
-	if (m_audio_restore_timer)
-		m_audio_restore_timer->stop();
 	if (m_first_cw_conn.connected())
 		m_first_cw_conn.disconnect();
 
@@ -228,6 +220,16 @@ void eDVBSoftDecoder::stop()
 		m_dvr_fd = -1;
 	}
 
+	// Stop decoder - release PID filters and pause
+	if (m_decoder)
+	{
+		eDebug("[eDVBSoftDecoder] Stopping decoder");
+		m_decoder->pause();
+		m_decoder->setVideoPID(-1, -1);
+		m_decoder->setAudioPID(-1, -1);
+		m_decoder->set();  // Apply the changes to release PID filters
+	}
+
 	// Release decode demux
 	if (m_decode_demux)
 	{
@@ -235,20 +237,16 @@ void eDVBSoftDecoder::stop()
 		m_decode_demux = nullptr;
 	}
 
-	// Stop decoder - release video/audio devices
-	if (m_decoder)
-	{
-		eDebug("[eDVBSoftDecoder] Stopping decoder");
-		m_decoder->pause();
-		m_decoder->setVideoPID(-1, -1);
-		m_decoder->setAudioPID(-1, -1);
-		m_decoder->set();  // Apply the changes to release devices
-		m_decoder = nullptr;
-	}
-
-	// Free PVR handler last
+	// Free PVR handler before releasing the decoder
 	eDebug("[eDVBSoftDecoder] Freeing PVR handler");
 	m_pvr_handler.free();
+
+	// Release decoder
+	if (m_decoder)
+	{
+		eDebug("[eDVBSoftDecoder] Releasing decoder");
+		m_decoder = nullptr;
+	}
 
 	m_pids_active.clear();
 	m_running = false;
@@ -357,12 +355,24 @@ int eDVBSoftDecoder::setupRecorder()
 	// Reset state
 	m_decoder_started = false;
 
+	// Start record thread
+	m_record->start();
+
+	int wait_timeout = eSimpleConfig::getInt("config.softcsa.waitForDataTimeout", 800);
+
+	// Disabled (0): start decoder immediately, no CW waiting
+	if (wait_timeout == 0)
+	{
+		eDebug("[eDVBSoftDecoder] CW wait disabled - starting decoder immediately");
+		startDecoderOrBuffer();
+		return 0;
+	}
+
 	// Check if CW is already available (e.g. fast channel switch)
 	if (m_session && m_session->hasKeys())
 	{
-		eDebug("[eDVBSoftDecoder] First CW already available - starting decoder with DVR wait");
-		m_record->start();
-		startDecoderWithDvrWait();
+		eDebug("[eDVBSoftDecoder] First CW already available - starting decoder");
+		startDecoderOrBuffer();
 		return 0;
 	}
 
@@ -374,15 +384,11 @@ int eDVBSoftDecoder::setupRecorder()
 	}
 
 	// Start timeout timer for CW
-	int wait_timeout = eSimpleConfig::getInt("config.misc.softcsa.waitForDataTimeout", 800);
 	eDebug("[eDVBSoftDecoder] Waiting for first CW (timeout=%dms)", wait_timeout);
 
 	m_start_timer = eTimer::create(eApp);
 	CONNECT(m_start_timer->timeout, eDVBSoftDecoder::onWaitForFirstDataTimeout);
 	m_start_timer->start(wait_timeout, true);  // single-shot
-
-	// Start record thread
-	m_record->start();
 
 	return 0;
 }
@@ -689,7 +695,6 @@ void eDVBSoftDecoder::updateDecoder(int vpid, int vpidtype, int pcrpid)
 								apid = cached_apid;
 								atype = program.audioStreams[s].type;
 								audio_index = s;
-								m_current_audio_index = audio_index;
 								eDebug("[eDVBSoftDecoder] Using cached audio: apid=%04x atype=%d (stream %u)", apid, atype, audio_index);
 								break;
 							}
@@ -707,7 +712,6 @@ void eDVBSoftDecoder::updateDecoder(int vpid, int vpidtype, int pcrpid)
 				if (audio_index >= program.audioStreams.size())
 					audio_index = 0;  // Fallback to first stream
 
-				m_current_audio_index = audio_index;
 				apid = program.audioStreams[audio_index].pid;
 				atype = program.audioStreams[audio_index].type;
 				eDebug("[eDVBSoftDecoder] Using default audio: apid=%04x atype=%d (stream %u of %zu)",
@@ -718,8 +722,23 @@ void eDVBSoftDecoder::updateDecoder(int vpid, int vpidtype, int pcrpid)
 			{
 				m_decoder->setAudioPID(apid, atype);
 
+				// On Broadcom, MPEG audio decoders have tiny internal buffers
+				// and need frequent writes to avoid underruns. Reduce write
+				// threshold so data reaches the decoder with less delay.
+#if !defined(HAVE_HISILICON)
+				if (m_record)
+				{
+					bool mpeg = (atype == eDVBServicePMTHandler::audioStream::atMPEG);
+					size_t threshold = mpeg ? eFilePushThreadRecorder::minWriteMPEG : eFilePushThreadRecorder::minWriteDefault;
+					m_record->setMinWrite(threshold);
+					eDebug("[eDVBSoftDecoder] Write threshold set to %zu KB (%s audio)",
+						threshold >> 10, mpeg ? "MPEG" : "non-MPEG");
+				}
+#endif
+
 				// Notify parent about selected audio PID
 				m_audio_pid_selected(apid);
+
 			}
 		}
 
@@ -731,19 +750,6 @@ void eDVBSoftDecoder::updateDecoder(int vpid, int vpidtype, int pcrpid)
 			m_decoder->play();
 			eDebug("[eDVBSoftDecoder] Decoder PLAY with vpid=%04x vpidtype=%d", vpid, vpidtype);
 			m_decoder_ready();
-
-			// Start audio reset timer to fix audio dropouts on some boxes.
-			// After decoder start, briefly toggle the audio track to force
-			// the decoder to reinitialize audio output.
-			int audioResetDelay = eSimpleConfig::getInt("config.softcsa.audioResetDelay", 0);
-			if (!m_noaudio && audioResetDelay > 0)
-			{
-				m_audio_reset_timer->stop();
-				m_audio_restore_timer->stop();
-				m_audio_reset_original_track = m_current_audio_index;
-				m_audio_reset_timer->start(audioResetDelay, true);
-				eDebug("[eDVBSoftDecoder] Audio reset scheduled in %dms", audioResetDelay);
-			}
 		}
 		else
 		{
@@ -756,47 +762,6 @@ void eDVBSoftDecoder::videoEvent(struct iTSMPEGDecoder::videoEvent event)
 {
 	// Forward video events to parent
 	m_video_event(event);
-}
-
-void eDVBSoftDecoder::audioResetToggle()
-{
-	if (!m_running || !m_decoder)
-		return;
-
-	eDVBServicePMTHandler::program program;
-	if (m_source_handler.getProgramInfo(program))
-		return;
-
-	unsigned int numTracks = program.audioStreams.size();
-	if (numTracks == 0)
-		return;
-
-	if (numTracks > 1)
-	{
-		// Toggle to a different audio track to force decoder reinitialization
-		unsigned int alt = (m_audio_reset_original_track + 1) % numTracks;
-		eDebug("[eDVBSoftDecoder] Audio reset: toggling from track %u to %u (of %u)",
-		       m_audio_reset_original_track, alt, numTracks);
-		selectAudioTrack(alt);
-
-		// Start restore timer to switch back after brief delay
-		m_audio_restore_timer->start(100, true);
-	}
-	else
-	{
-		// Only 1 track: re-select it to force decoder reinit
-		eDebug("[eDVBSoftDecoder] Audio reset: re-selecting single track 0");
-		selectAudioTrack(0);
-	}
-}
-
-void eDVBSoftDecoder::audioResetRestore()
-{
-	if (!m_running || !m_decoder)
-		return;
-
-	eDebug("[eDVBSoftDecoder] Audio reset: restoring original track %u", m_audio_reset_original_track);
-	selectAudioTrack(m_audio_reset_original_track);
 }
 
 // ============================================================================
@@ -848,6 +813,16 @@ int eDVBSoftDecoder::setAudioPID(int pid, int type)
 {
 	if (m_noaudio)
 		return 0;
+#if !defined(HAVE_HISILICON)
+	if (m_record)
+	{
+		bool mpeg = (type == eDVBServicePMTHandler::audioStream::atMPEG);
+		size_t threshold = mpeg ? eFilePushThreadRecorder::minWriteMPEG : eFilePushThreadRecorder::minWriteDefault;
+		m_record->setMinWrite(threshold);
+		eDebug("[eDVBSoftDecoder] Write threshold set to %zu KB (%s audio)",
+			threshold >> 10, mpeg ? "MPEG" : "non-MPEG");
+	}
+#endif
 	if (m_decoder)
 		return m_decoder->setAudioPID(pid, type);
 	return -1;
