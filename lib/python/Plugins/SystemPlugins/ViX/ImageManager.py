@@ -110,11 +110,9 @@ cleanup()
 def ImageManagerautostart(reason, session=None, **kwargs):
 	"""called with reason=1 to during /sbin/shutdown.sysvinit, with reason=0 at startup?"""
 	global autoImageManagerTimer
-	global _session
 	if reason == 0:
 		print("[ImageManager] AutoStart Enabled")
 		if session is not None:
-			_session = session
 			if autoImageManagerTimer is None:
 				autoImageManagerTimer = AutoImageManagerTimer(session)
 	else:
@@ -197,10 +195,6 @@ class VIXImageManager(Screen):
 
 		else:
 			self["list"] = MenuList(list=[((_(" Press 'Menu' to select a storage device - none available")), "Waiter")])
-			self["key_red"].hide()
-			self["key_green"].hide()
-			self["key_yellow"].hide()
-			self["key_blue"].hide()
 		self.populate_List()
 		self.activityTimer = eTimer()
 		self.activityTimer.timeout.get().append(self.backupRunning)
@@ -308,11 +302,13 @@ class VIXImageManager(Screen):
 		# --------------------------------------------------------------------------------------
 		mount = config.imagemanager.backuplocation.value, path.normpath(config.imagemanager.backuplocation.value)
 		hdd = "/media/hdd/", "/media/hdd"
+		self["mainactions"].setEnabled(False)
+		self.mountAvailable = False
+		self["key_red"].hide()
+		self["key_green"].hide()
+		self["key_yellow"].hide()
+		self["key_blue"].hide()
 		if mount not in config.imagemanager.backuplocation.choices.choices and hdd not in config.imagemanager.backuplocation.choices.choices:
-			self["mainactions"].setEnabled(False)
-			self.mountAvailable = False
-			self["key_green"].hide()
-			self["key_yellow"].hide()
 			self["lab1"].setText(_("Device: None available") + "\n" + _("Press 'Menu' to select a storage device"))
 		else:
 			if mount not in config.imagemanager.backuplocation.choices.choices:
@@ -329,13 +325,15 @@ class VIXImageManager(Screen):
 				if path.exists(f"{self.BackupDirectory}{config.imagemanager.folderprefix.value}-{MACHINEBUILD}-{IMAGETYPE}-swapfile_backup"):
 					system(f"swapoff {self.BackupDirectory}{config.imagemanager.folderprefix.value}-{MACHINEBUILD}-{IMAGETYPE}-swapfile_backup")
 					remove(f"{self.BackupDirectory}{config.imagemanager.folderprefix.value}-{MACHINEBUILD}-{IMAGETYPE}-swapfile_backup")
+				self.mountAvailable = True
 				self.refreshList()
+				self["key_green"].show()
+				self["key_yellow"].show()
+				self["mainactions"].setEnabled(True)
 			except Exception:
-				self["lab1"].setText(_("Device: ") + config.imagemanager.backuplocation.value + "\n" + _("There is a problem with this device. Please reformat it and try again."))
-			self["mainactions"].setEnabled(True)
-			self.mountAvailable = True
-			self["key_green"].show()
-			self["key_yellow"].show()
+				self["lab1"].setText(
+					_("Device: ") + config.imagemanager.backuplocation.value + "\n" +
+					_("Unable to read from the backup device. Please check that it is accessible."))
 
 	def createSetup(self):
 		self.session.openWithCallback(self.setupDone, ImageManagerSetup)
@@ -1541,8 +1539,8 @@ class ImageBackup(Screen):
 					emlist = emlist[0:len(emlist) - config.imagemanager.number_to_keep.value]
 					for fil in emlist:
 						remove(self.BackupDirectory + fil)
-		except Exception:
-			pass
+		except Exception as err:
+			print("[ImageManager] BackupComplete: error while pruning", err)
 		if config.imagemanager.schedule.value:
 			atLeast = 60
 			autoImageManagerTimer.backupupdate(atLeast)
