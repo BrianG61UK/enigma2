@@ -2112,13 +2112,11 @@ void gPixmap::blit(const gPixmap& src, const eRect& _pos, const gRegion& clip, i
 				/* alpha blending is requested */
 				if (gAccel::getInstance()->hasAlphaBlendingSupport()) {
 #ifdef FORCE_ALPHABLENDING_ACCELERATION
-					/* Hardware alpha blending is broken on the few
-					 * boxes that support it, so only use it
-					 * when scaling */
-					if (flag & blitScale)
-						accel = true;
-					else
-						accel = false;
+#ifdef DREAMBOX
+					accel = false;
+#else
+					accel = true;
+#endif
 #else
 					if (flag & blitScale)
 						accel = true;
