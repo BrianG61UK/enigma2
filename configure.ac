@@ -512,10 +512,20 @@ if test "$BOXTYPE" == "vuultimo4k" -o "$BOXTYPE" == "vuduo4kse"; then
 fi
 
 AC_ARG_WITH([egl],
-  AS_HELP_STRING([--with-egl], [enable EGL/GLES2/GLES3 backend]),
+  AS_HELP_STRING([--with-egl], [enable EGL/GLES2/GLES3 backend, yes/no/auto]),
   [],
-  [with_egl=auto])
+  [with_egl=no])
 
+# Unlike most --with-* switches here, EGL is not something a box gets by
+# default: with_egl defaults to "no", so a box only gets probed for EGL/GLES
+# when whatever's driving this build (e.g. the recipe's EXTRA_OECONF, keyed
+# off the distro-level ENABLE_E2EGL var) explicitly passes --with-egl.
+# Boxes whose SDK merely happens to carry EGL/GLESv2/GLES3 pkg-config
+# metadata without a working backend (this has bitten vuduo4kse, vusolo4k
+# and vuultimo4k in the past, with link failures such as "undefined
+# reference to glBindVertexArray") simply never pass --with-egl and are
+# never probed at all - with_egl stays "no" and PKG_CHECK_MODULES below
+# never runs.
 have_egl=no
 have_gles2=no
 have_gles3=no
