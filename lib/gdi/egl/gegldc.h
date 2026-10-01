@@ -68,9 +68,36 @@ private:
 	// around it.
 	int m_shadow_blit_stride = 1;
 	int m_shadow_blit_frame = 0;
+	// Diagnostic, opt-in via ENIGMA_EGL_BLIT_INVALIDATE=1: call
+	// glInvalidateFramebuffer() on the window surface right before the shadow
+	// blit so a tiled GPU needn't load the stale buffer into tile memory first.
+	bool m_blit_invalidate = false;
 
 	bool createShadowFramebuffer();
 	void destroyShadowFramebuffer();
+
+	// setResolution() (below) is called directly from Python (skin.py,
+	// PicturePlayer, VideoFinetune) on the main thread, but actually
+	// applying a resolution change touches GL/EGL state (shader projection
+	// matrices, the shadow FBO's texture size, the native window's own
+	// authored size) that's only ever valid to touch from gRC's render
+	// thread - the only thread that ever makes the EGL context current (see
+	// cleanupEGL()'s own comment on this same rule). Doing any of that
+	// directly in setResolution() was a silent no-op at best (GL calls
+	// issued with no context current on that thread) - confirmed as why a
+	// 2560x1440 skin rendered with completely wrong sizes/positions while
+	// 1080p ones worked fine: this canvas's *construction-time* size comes
+	// from fbClass's boot-time mode (see egl_init.cpp), which commonly
+	// happens to already be 1920x1080 - so a 1080p skin's setResolution()
+	// call matched it and hit the early-return guard, never exercising this
+	// path at all; anything else actually ran it, on the wrong thread.
+	// setResolution() now only records the request; applyPendingResolutionChange()
+	// - called from the top of flip(), on the render thread - does the real
+	// work, at most one frame later.
+	bool m_pending_resolution_change = false;
+	int m_pending_width = 0;
+	int m_pending_height = 0;
+	void applyPendingResolutionChange();
 
 	// External screenshot support (aio-grab) - see gosd_capture.h. Only
 	// started for window-surface providers: on a pixmap-surface provider
@@ -78,6 +105,10 @@ private:
 	// framebuffer path captures it correctly.
 	gEGLOSDCapture m_osd_capture;
 	void serviceOsdCapture();
+
+	// GPU readback into m_pixmap - see its definition (gegldc.cpp, right
+	// after serviceOsdCapture()) for why enableSpinner() needs this.
+	void captureBackgroundIntoPixmap(const eRect& rect);
 
 	// fbClass lock (ofgwrite's Mode 2 flash, see ImageManager.py) on a
 	// window-surface platform: the window surface is a separate layer
@@ -102,6 +133,12 @@ private:
 	struct FrameProfile {
 		double text_ms = 0, text_flush_ms = 0, vbo_ms = 0, atlas_ms = 0, band_ms = 0, overlay_ms = 0, other_ms = 0;
 		int text_ops = 0, text_flushes = 0, glyphs = 0, atlas_uploads = 0, atlas_rows = 0, band_uploads = 0, band_rows = 0, overlays = 0, other_ops = 0;
+		// Rectangle breakdown (see executeRectangle()): flat = basic-shader
+		// path, adv1/adv2 = advanced-shader ops drawn in 1 or 2 passes, draws =
+		// advanced-shader draw calls, adv_mpx = megapixels of clip-limited
+		// area actually shaded by the advanced shader (all passes summed).
+		int rect_flat = 0, rect_adv1 = 0, rect_adv2 = 0, rect_adv_draws = 0, rect_fast = 0;
+		double rect_adv_mpx = 0;
 	} m_prof;
 	std::chrono::steady_clock::time_point m_prof_last_flip;
 	static double msSince(const std::chrono::steady_clock::time_point& t0) {
