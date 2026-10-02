@@ -536,6 +536,20 @@ AS_IF([test "x$have_gles2" = "xyes"], [
   CPPFLAGS="$CPPFLAGS $GLES2_CFLAGS"
   AC_CHECK_HEADERS([GLES3/gl3.h], [have_gles3=yes], [have_gles3=no])
   CPPFLAGS="$saved_CPPFLAGS"
+
+  # The header alone is not proof the driver implements GLES3: VU+'s
+  # vuduo4kse/vusolo4k/vuultimo4k ship a complete GLES3/gl3.h but the same
+  # GLES1/2-only libv3ddriver.so (confirmed by inspecting the real vendor
+  # binary - none of the GLES3-only core symbols such as glBindVertexArray are
+  # exported). With HAVE_GLES3 defined here, the "#if defined(HAVE_GLES3)"
+  # shader code compiles in calls to them and the final link fails with
+  # "undefined reference to glBindVertexArray". Those three boxes are simply
+  # kept off the GLES3 path; every other box keeps the plain header check.
+  case "$BOXTYPE" in
+    vuduo4kse|vusolo4k|vuultimo4k)
+      have_gles3=no
+      ;;
+  esac
 ])
 
 AS_IF([test "x$with_egl" = "xyes"], [
@@ -563,6 +577,20 @@ AS_IF([test "x$use_egl" = "xyes" -a "x$have_gles3" = "xyes"], [
 ])
 
 AM_CONDITIONAL([HAVE_EGL], [test "x$use_egl" = "xyes"])
+
+# Rendering the OSD canvas scaled down when it is larger than the GPU's maximum
+# texture/renderbuffer size (e.g. a 2560x1440 skin on VideoCore IV, limit 2048)
+# - see gEGLDC::updatePhysicalSize(). Off unless asked for: the recipe passes it
+# only for EGL machines that do not carry E2EGL_WQHD_FEATURE (see
+# egl-gles-extras/enigma2.bbappend), so every other box behaves exactly as it
+# did before this existed.
+AC_ARG_ENABLE([egl-canvas-scaling],
+  AS_HELP_STRING([--enable-egl-canvas-scaling], [scale the EGL OSD canvas down when it exceeds the GPU texture size limit]),
+  [],
+  [enable_egl_canvas_scaling=no])
+AS_IF([test "x$use_egl" = "xyes" -a "x$enable_egl_canvas_scaling" = "xyes"], [
+  AC_DEFINE([HAVE_EGL_CANVAS_SCALING], [1], [Scale the EGL OSD canvas down when it exceeds the GPU texture size limit])
+])
 
 AC_SUBST([EGL_CFLAGS])
 AC_SUBST([EGL_LIBS])
@@ -626,6 +654,52 @@ if test "x$use_nxpl_egl" = "xyes"; then
 fi
 AC_SUBST([NXPL_CFLAGS])
 AC_SUBST([NXPL_LIBS])
+
+# VU+'s Broadcom Nexus EGL stack (see lib/gdi/egl/platform/vuplus) - the same
+# underlying Nexus/NXPL/V3D driver family as GigaBlue Quad 4K Pro above
+# (confirmed by inspecting the actual vendor tarball: libgles-<machine>
+# ships libnxpl.so/libv3ddriver.so/libdvb_base.so/libdvb_client.so, and its
+# nxpl.pc reads "Broadcom/Vu+ Nexus platform layer"), reached through VU+'s
+# own thin wrapper library "libvupl" (<eglvuplus.h>, "Vu+ API for
+# EGL/OpenGLES") instead of raw nxclient.h/default_nexus.h - so, unlike
+# gbquad4kpro, no direct Nexus header dependency or BSTD_CPU_ENDIAN define is
+# needed here. Model list mirrors oe-alliance-core's
+# meta-brands/meta-vuplus/recipes-graphics/{libgles,libvupl} COMPATIBLE_MACHINE
+# sets (the models that actually ship a libvupl package) - not every VUPLUS*
+# BOXTYPE defined above has one (e.g. vuduo, vuduo4klite, vusolo, vuultimo,
+# vuuno, vuzero do not and are deliberately left out here).
+AM_CONDITIONAL(HAVE_VUPLUS_EGL, test "x$use_egl" = "xyes" -a \( "$BOXTYPE" == "vuduo2" -o "$BOXTYPE" == "vuduo4k" -o "$BOXTYPE" == "vuduo4kse" -o "$BOXTYPE" == "vusolo2" -o "$BOXTYPE" == "vusolo4k" -o "$BOXTYPE" == "vusolose" -o "$BOXTYPE" == "vuultimo4k" -o "$BOXTYPE" == "vuuno4k" -o "$BOXTYPE" == "vuuno4kse" -o "$BOXTYPE" == "vuzero4k" \))
+if test "x$use_egl" = "xyes" -a \( "$BOXTYPE" == "vuduo2" -o "$BOXTYPE" == "vuduo4k" -o "$BOXTYPE" == "vuduo4kse" -o "$BOXTYPE" == "vusolo2" -o "$BOXTYPE" == "vusolo4k" -o "$BOXTYPE" == "vusolose" -o "$BOXTYPE" == "vuultimo4k" -o "$BOXTYPE" == "vuuno4k" -o "$BOXTYPE" == "vuuno4kse" -o "$BOXTYPE" == "vuzero4k" \); then
+	AC_DEFINE(HAVE_VUPLUS_EGL, 1, [VU+ Nexus EGL window backend (libvupl) available])
+	PKG_CHECK_MODULES([VUPL], [libvupl], [], [
+		AC_MSG_ERROR([VU+ EGL build requires the "libvupl" pkg-config module (from libvupl/libvupl.inc in oe-alliance-core's meta-vuplus layer) - not found in the sysroot])
+	])
+fi
+AC_SUBST([VUPL_CFLAGS])
+AC_SUBST([VUPL_LIBS])
+
+# ABCom's pulse4k/pulse4kmini (HiSilicon Hi3798MV200, ARM Mali-450 "Utgard"
+# GPU) EGL backend (see lib/gdi/egl/platform/abcom) - a real EGL window
+# surface against a Mali Utgard fbdev binary driver (libMali.so), unlike
+# GigaBlue/VU+'s Broadcom Nexus stack above. Confirmed by reading the actual
+# recipes (not auth-gated - meta-brands/meta-abcom/recipes-graphics/mali/
+# {abcom-mali-utgard.inc,abcom-mali-3798mv200.bb} in oe-alliance-core, whose
+# COMPATIBLE_MACHINE is exactly "^pulse4k$|^pulse4kmini$"): the vendor
+# package's do_install:append symlinks libMali.so straight onto the
+# completely standard libEGL.so.1/libGLESv1_CM.so.1/libGLESv2.so.2 sonames,
+# and abcom-mali-utgard.inc says outright "The driver is missing EGL/GLES
+# headers and pkgconfig files" - it DEPENDS on mesa purely to obtain mesa's
+# own standard Khronos EGL/GLES headers and egl.pc/glesv2.pc at build time
+# (RREPLACES/RCONFLICTS then swap mesa's runtime libEGL/libGLESv2 for
+# libMali.so at the package level). So unlike gbquad4kpro/VU+, there is no
+# vendor-specific header or pkg-config module to depend on here at all - the
+# generic EGL_CFLAGS/EGL_LIBS/GLES2_CFLAGS/GLES2_LIBS this repo's HAVE_EGL
+# block already resolves via plain "egl"/"glesv2" pkg-config link straight
+# to it, and are already applied build-wide (see CXXFLAGS above).
+AM_CONDITIONAL(HAVE_ABCOM_EGL, test "x$use_egl" = "xyes" -a \( "$BOXTYPE" == "pulse4k" -o "$BOXTYPE" == "pulse4kmini" \))
+if test "x$use_egl" = "xyes" -a \( "$BOXTYPE" == "pulse4k" -o "$BOXTYPE" == "pulse4kmini" \); then
+	AC_DEFINE(HAVE_ABCOM_EGL, 1, [ABCom pulse4k/pulse4kmini Mali Utgard fbdev EGL window backend available])
+fi
 
 if test "$BOXTYPE" == "dm900"; then
 	AC_DEFINE(DM900, 1, [Dreambox hardware])
