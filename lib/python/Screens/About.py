@@ -3,7 +3,7 @@ from platform import libc_ver
 from re import search, sub
 from requests import get
 from sys import version_info, version as pyversion
-from enigma import eTimer, getDesktop, getEnigmaLastCommitDate, getEnigmaLastCommitHash, eDVBCSAEngine
+from enigma import eTimer, getDesktop, getEnigmaLastCommitDate, getEnigmaLastCommitHash, getEGLVersionString, getGLESVersionString, eDVBCSAEngine
 from Components.About import getBoxUptime, getCPUArch, getEnigmaUptime, getIfConfig, getIfTransferredData
 from Components.ActionMap import ActionMap
 from Components.Button import Button
@@ -45,6 +45,20 @@ def getLastCommitDate():
 
 def getLastCommitHash():
 	return getEnigmaLastCommitHash()[:7]
+
+
+def eglStr():
+	egl = getEGLVersionString().split(' ', 1)[0]
+	if egl:
+		return f"EGL {egl}"
+	return ""
+
+
+def glesStr():
+	gles = getGLESVersionString()
+	if gles:
+		return gles.split(' "', 1)[0]
+	return ""
 
 
 def _formatDate(Date):
@@ -216,6 +230,10 @@ class About(AboutBase):
 		if SystemInfo["imagetype"] != "release":
 			imageSubBuild = ".%s" % SystemInfo["imagedevbuild"]
 		AboutText += _("Image:\t%s.%s%s (%s)\n") % (SystemInfo["imageversion"], SystemInfo["imagebuild"], imageSubBuild, SystemInfo["imagetype"].title())
+
+		egl = " / ".join([x for x in (eglStr(), glesStr()) if x])
+		if egl:
+			AboutText += _("EGL/GLES:\t%s\n") % egl
 
 		AboutText += _("Installed:\t%s\n") % getFlashDateString()
 

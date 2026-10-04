@@ -549,6 +549,13 @@ AS_IF([test "x$have_gles2" = "xyes"], [
     vuduo4kse|vusolo4k|vuultimo4k)
       have_gles3=no
       ;;
+    # pulse4k/pulse4kmini/hd61(ax61)/sf8008/sf8008m/gbmv200(gbtrio4k etc.): libMali (Mali-450) is GLES 2.0 only - it exports
+    # glBindVertexArrayOES/glGenVertexArraysOES but none of the core GLES3
+    # symbols - while any GLES3/gl3.h that happens to be in the sysroot (e.g.
+    # mesa's) would still turn HAVE_GLES3 on.
+    pulse4k|pulse4kmini|hd61|sf8008|sf8008m|gbmv200|h8se|h9|h9combo|h9combose|h9se|h10|h11|i55plus|i55se)
+      have_gles3=no
+      ;;
   esac
 ])
 
@@ -630,8 +637,14 @@ fi
 # BOXTYPE gb7252 (also covers gb7252pro's newer driver drop) and gb72604.
 use_nxpl_egl=no
 if test "x$use_egl" = "xyes" -a \( "x$MACHINEBUILD" = "xgbquad4kpro" -o "x$MACHINEBUILD" = "xvuduo4klite" \
-	-o "x$BOXTYPE" = "xgb7252" -o "x$BOXTYPE" = "xgb72604" \); then
+	-o "x$BOXTYPE" = "xgb7252" -o "x$BOXTYPE" = "xgb72604" \
+	-o "x$BOXTYPE" = "xh7" -o "x$BOXTYPE" = "xh17" \); then
 	use_nxpl_egl=yes
+fi
+# Zgemma h7/h17 (meta-airdigital's airdigital-v3ddriver) ship libnxpl/libnexus/libv3ddriver
+# but no libnxclient.so: the provider joins Nexus via NEXUS_Platform_AuthenticatedJoin instead.
+if test "x$use_nxpl_egl" = "xyes" -a \( "x$BOXTYPE" = "xh7" -o "x$BOXTYPE" = "xh17" \); then
+	AC_DEFINE(HAVE_NXPL_NO_NXCLIENT, 1, [No libnxclient: join Nexus with NEXUS_Platform_AuthenticatedJoin])
 fi
 AM_CONDITIONAL(HAVE_GBQUAD_EGL, test "x$use_nxpl_egl" = "xyes")
 if test "x$use_nxpl_egl" = "xyes"; then
@@ -678,27 +691,27 @@ fi
 AC_SUBST([VUPL_CFLAGS])
 AC_SUBST([VUPL_LIBS])
 
-# ABCom's pulse4k/pulse4kmini (HiSilicon Hi3798MV200, ARM Mali-450 "Utgard"
-# GPU) EGL backend (see lib/gdi/egl/platform/abcom) - a real EGL window
-# surface against a Mali Utgard fbdev binary driver (libMali.so), unlike
-# GigaBlue/VU+'s Broadcom Nexus stack above. Confirmed by reading the actual
-# recipes (not auth-gated - meta-brands/meta-abcom/recipes-graphics/mali/
-# {abcom-mali-utgard.inc,abcom-mali-3798mv200.bb} in oe-alliance-core, whose
-# COMPATIBLE_MACHINE is exactly "^pulse4k$|^pulse4kmini$"): the vendor
-# package's do_install:append symlinks libMali.so straight onto the
-# completely standard libEGL.so.1/libGLESv1_CM.so.1/libGLESv2.so.2 sonames,
-# and abcom-mali-utgard.inc says outright "The driver is missing EGL/GLES
-# headers and pkgconfig files" - it DEPENDS on mesa purely to obtain mesa's
-# own standard Khronos EGL/GLES headers and egl.pc/glesv2.pc at build time
-# (RREPLACES/RCONFLICTS then swap mesa's runtime libEGL/libGLESv2 for
-# libMali.so at the package level). So unlike gbquad4kpro/VU+, there is no
-# vendor-specific header or pkg-config module to depend on here at all - the
-# generic EGL_CFLAGS/EGL_LIBS/GLES2_CFLAGS/GLES2_LIBS this repo's HAVE_EGL
-# block already resolves via plain "egl"/"glesv2" pkg-config link straight
-# to it, and are already applied build-wide (see CXXFLAGS above).
-AM_CONDITIONAL(HAVE_ABCOM_EGL, test "x$use_egl" = "xyes" -a \( "$BOXTYPE" == "pulse4k" -o "$BOXTYPE" == "pulse4kmini" \))
-if test "x$use_egl" = "xyes" -a \( "$BOXTYPE" == "pulse4k" -o "$BOXTYPE" == "pulse4kmini" \); then
-	AC_DEFINE(HAVE_ABCOM_EGL, 1, [ABCom pulse4k/pulse4kmini Mali Utgard fbdev EGL window backend available])
+# ABCom's pulse4k/pulse4kmini, GFutures' hd61 (ax61), Octagon's sf8008/sf8008m and
+# GigaBlue's gbmv200 (gbip4k/gbtrio4k/gbtrio4kpro) and Zgemma/AirDigital's h8se/h9/h9combo/
+# h9combose/h9se/h10/h11/i55plus/i55se (all HiSilicon Hi3798MV200, ARM Mali-450 "Utgard"
+# GPU) EGL backend (see lib/gdi/egl/platform/hisi) - a real EGL window
+# surface against a Mali fbdev binary driver (libMali.so, GLES 2.0 only),
+# unlike GigaBlue/VU+'s Broadcom Nexus stack above. oe-alliance-core's
+# abcom-mali-utgard.inc symlinks libMali.so onto the standard libEGL/libGLESv2
+# sonames but ships NO headers or .pc files (mesa in its DEPENDS never reaches
+# enigma2's sysroot), so egl-gles-extras/meta-local's abcom-mali-3798mv200
+# bbappend stages the matching vendor EGL/GLES/GLES2/KHR headers and generates
+# egl.pc/glesv2.pc - after that the generic "egl"/"glesv2" PKG_CHECK_MODULES
+# above resolve as usual. GLES3 headers are deliberately not staged.
+# BOXTYPE is the OE MACHINE, so this covers every MACHINEBUILD of these machines; which
+# MACHINEBUILDs actually get EGL is decided by ENABLE_E2EGL in egl-gles-extras/openvix.conf.
+hisi_mali_egl_box=no
+case "$BOXTYPE" in
+  pulse4k|pulse4kmini|hd61|sf8008|sf8008m|gbmv200|h8se|h9|h9combo|h9combose|h9se|h10|h11|i55plus|i55se) hisi_mali_egl_box=yes ;;
+esac
+AM_CONDITIONAL(HAVE_HISI_MALI_EGL, test "x$use_egl" = "xyes" -a "x$hisi_mali_egl_box" = "xyes")
+if test "x$use_egl" = "xyes" -a "x$hisi_mali_egl_box" = "xyes"; then
+	AC_DEFINE(HAVE_HISI_MALI_EGL, 1, [HiSilicon Hi3798MV200 Mali Utgard fbdev EGL window backend available])
 fi
 
 if test "$BOXTYPE" == "dm900"; then
