@@ -180,14 +180,17 @@ def loadSkin(filename, scope=SCOPE_SKIN, desktop=getDesktop(GUI_SKIN_ID), screen
 			for element in domSkin:
 				if element.tag == "screen":  # Process all screen elements.
 					name = element.attrib.get("name", None)
-					if name:  # Without a name, it's useless!
-						scrnID = element.attrib.get("id", None)
-						if scrnID is None or scrnID == screenID:  # If there is a screen ID is it for this display.
+					# "name" attribute is mandatory in <screen> elements
+					if name:
+						# "id" attribute is optional in <screen> elements, but if present the screen will  only
+						# be saved if it matches the current skin type, i.e. GUI_SKIN_ID or DISPLAY_SKIN_ID
+						if int(element.attrib.get("id", screenID)) == screenID:
 							# print("[Skin] DEBUG: Extracting screen '%s' from '%s'.  (scope='%s')" % (name, filename, scope))
 							domScreens[name] = (element, "%s/" % dirname(filename))
 				elif element.tag == "windowstyle":  # Process the windowstyle element.
 					scrnID = element.attrib.get("id", None)
-					if scrnID is not None:  # Without an scrnID, it is useless!
+					# "id" attribute is mandatory in <windowstyle> elements
+					if scrnID is not None:
 						scrnID = int(scrnID)
 						# print("[Skin] DEBUG: Processing a windowstyle ID='%s'." % scrnID)
 						domStyle = ElementTree(Element("skin"))
@@ -389,30 +392,26 @@ def parseColor(value, default=0x00FFFFFF):
 
 def parseGradient(value):
 	def validColor(value):
-		if value[0] == "#" and len(value) in (9, 7):
-			isColor = True
-		elif value in colors:
-			isColor = True
-		else:
-			isColor = False
-		return isColor
+		return (value.startswith("#") and len(value) in (9, 7)) or value in colors
 
 	data = [x.strip() for x in value.split(",")]
 	gradientColors = [gRGB(0x00000000), gRGB(0x00FFFFFF), gRGB(0x00FFFFFF)]  # Start color, center color, end color.
-	for index, color in enumerate(data):
-		if not validColor(color) or index > 2:
+	colorCount = 0
+	for color in data[:3]:
+		if not validColor(color):
 			break
-		gradientColors[index] = parseColor(color)
-	if index == 2:
+		gradientColors[colorCount] = parseColor(color)
+		colorCount += 1
+	if colorCount == 2:  # Two colors means start and end, drawRectangle treats center == end as a two color gradient.
 		gradientColors[2] = gradientColors[1]
-	argCount = len(data) - index
-	if index > 1 and argCount:
+	argCount = len(data) - colorCount
+	if colorCount > 1 and argCount:
 		options = {
 			"horizontal": eWidget.GRADIENT_HORIZONTAL,
 			"vertical": eWidget.GRADIENT_VERTICAL,
 		}
-		direction = parseOptions(options, "gradient", data[index], eWidget.GRADIENT_VERTICAL)
-		alphaBlend = int(argCount > 1 and parseBoolean("alphablend", data[index + 1]))
+		direction = parseOptions(options, "gradient", data[colorCount], eWidget.GRADIENT_VERTICAL)
+		alphaBlend = int(argCount > 1 and parseBoolean("alphablend", data[colorCount + 1]))
 	else:
 		direction = eWidget.GRADIENT_VERTICAL
 		alphaBlend = 0
@@ -479,7 +478,8 @@ def parseScrollbarMode(s):
 			"showOnDemand": eListbox.showOnDemand,
 			"showAlways": eListbox.showAlways,
 			"showNever": eListbox.showNever,
-			"showLeft": eListbox.showLeft
+			"showLeft": eListbox.showLeft,
+			"showTop": eListbox.showTop,
 		}[s]
 	except KeyError:
 		print("[Skin] Error: Invalid scrollbarMode '%s'!  Must be one of 'showOnDemand', 'showAlways', 'showNever' or 'showLeft'." % s)
@@ -562,7 +562,7 @@ class AttributeParser:
 		return int(value) if self.scaleTuple[0][0] == self.scaleTuple[0][1] else int(int(value) * self.scaleTuple[0][0] / self.scaleTuple[0][1])
 
 	def applyVerticalScale(self, value):
-		return int(value) if self.scaleTuple[0][0] == self.scaleTuple[0][1] else int(int(value) * self.scaleTuple[1][0] / self.scaleTuple[1][1])
+		return int(value) if self.scaleTuple[1][0] == self.scaleTuple[1][1] else int(int(value) * self.scaleTuple[1][0] / self.scaleTuple[1][1])
 
 	def alphaBlend(self, value):
 		self.guiObject.setWidgetAlphaBlend(parseBoolean("alphablend", value))
@@ -1551,7 +1551,7 @@ def readSkin(screen, skin, names, desktop):
 					print("[Skin] OBSOLETE SOURCE WILL BE REMOVED %s, PLEASE UPDATE!" % source.removalDate)
 					if source.description:
 						print("[Skin] Source description: '%s'." % source.description)
-					wsource = source.new_source
+					wsource = source.newSource
 				else:
 					break  # Otherwise, use the source.
 			if source is None:
@@ -1658,13 +1658,13 @@ def readSkin(screen, skin, names, desktop):
 	def processScreen(widget, context):
 		for w in list(widget):
 			conditional = w.attrib.get("conditional")
-			if conditional and not [i for i in conditional.split(",") if i in list(screen.keys())]:
+			if conditional and not [i for i in conditional.split(",") if i in screen]:
 				continue
 			objecttypes = w.attrib.get("objectTypes", "").split(",")
-			if len(objecttypes) > 1 and (objecttypes[0] not in list(screen.keys()) or not [i for i in objecttypes[1:] if i == screen[objecttypes[0]].__class__.__name__]):
+			if len(objecttypes) > 1 and (objecttypes[0] not in screen or not [i for i in objecttypes[1:] if i == screen[objecttypes[0]].__class__.__name__]):
 				continue
 			objecttypesinverted = w.attrib.get("objectTypesInverted", "").split(",")
-			if len(objecttypesinverted) > 1 and (objecttypesinverted[0] not in list(screen.keys()) or [i for i in objecttypesinverted[1:] if i == screen[objecttypesinverted[0]].__class__.__name__]):
+			if len(objecttypesinverted) > 1 and (objecttypesinverted[0] not in screen or [i for i in objecttypesinverted[1:] if i == screen[objecttypesinverted[0]].__class__.__name__]):
 				continue
 			p = processors.get(w.tag, processNone)
 			try:
@@ -1746,9 +1746,6 @@ def readSkin(screen, skin, names, desktop):
 		import traceback
 		traceback.print_exc()
 
-	from Components.GUIComponent import GUIComponent
-	unusedComponents = [x for x in set(screen.keys()) - usedComponents if isinstance(x, GUIComponent)]
-	assert not unusedComponents, "[Skin] The following components in '%s' don't have a skin entry: %s" % (name, ", ".join(unusedComponents))
 	# This may look pointless, but it unbinds "screen" from the nested scope. A better
 	# solution is to avoid the nested scope above and use the context object to pass
 	# things around.
