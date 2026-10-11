@@ -3,7 +3,7 @@ from hashlib import md5
 from os import listdir, access, R_OK
 from os.path import isfile, join as pathjoin
 from re import split
-from enigma import Misc_Options, eDVBCIInterfaces, eDVBResourceManager, eDVBCSAEngine, getEnigmaLastCommitHash, getOARev
+from enigma import Misc_Options, eDVBCIInterfaces, eDVBResourceManager, eDVBCSAEngine, getEnigmaLastCommitHash, getOARev, eglOsdRectSupported
 
 from Components.RcModel import rc_model
 from Tools.Directories import fileCheck, fileExists, fileHas, pathExists, resolveFilename, SCOPE_LIBDIR, SCOPE_SKIN, fileReadLine, fileReadLines
@@ -191,7 +191,7 @@ def hasInitCam():
 
 
 SystemInfo["CanChangeOsdAlpha"] = access('/proc/stb/video/alpha', R_OK) and True or False
-SystemInfo["CanChangeOsdPosition"] = (access('/proc/stb/fb/dst_left', R_OK) or access('/proc/stb/vmpeg/0/dst_left', R_OK)) and True or False
+SystemInfo["CanChangeOsdPosition"] = (access('/proc/stb/fb/dst_left', R_OK) or access('/proc/stb/vmpeg/0/dst_left', R_OK) or eglOsdRectSupported()) and True or False
 SystemInfo["OsdSetup"] = SystemInfo["CanChangeOsdPosition"]
 SystemInfo["HasUsbhdd"] = {}
 SystemInfo["ArchIsARM"] = ARCHITECTURE.startswith(("arm", "cortex"))
@@ -256,7 +256,6 @@ SystemInfo["LCDMiniTVPiP"] = SystemInfo["LCDMiniTV"] and MODEL != "gb800ueplus"
 SystemInfo["LcdPowerOn"] = fileExists("/proc/stb/power/vfd")
 SystemInfo["FastChannelChange"] = False
 SystemInfo["Blindscan_t2_available"] = fileCheck("/proc/stb/info/vumodel") and MODEL.startswith("vu")
-SystemInfo["Vu_EAC3_fix"] = MODEL in ("vuultimo4k", "vuduo4kse")
 SystemInfo["HasTranscoding"] = pathExists("/proc/stb/encoder/0") or fileCheck("/dev/bcm_enc0")
 SystemInfo["HasH265Encoder"] = fileHas("/proc/stb/encoder/0/vcodec_choices", "h265")
 SystemInfo["CanNotDoSimultaneousTranscodeAndPIP"] = MODEL in ("vusolo4k", "gb7252")
@@ -302,7 +301,6 @@ SystemInfo["hasRCA"] = SystemInfo["rca"]
 SystemInfo["hasScart"] = SystemInfo["scart"]
 SystemInfo["hasScartYUV"] = SystemInfo["scartyuv"]
 SystemInfo["hasYUV"] = SystemInfo["yuv"]
-SystemInfo["needsVideoJudderDriverFix"] = BOXTYPE in ("gbquad4kpro", "vuduo4klite")
 SystemInfo["scalerSharpnessWorkaround"] = BOXTYPE in ("gbquad", "gbquadplus")
 SystemInfo["dmVideoRates"] = MODEL in ("dm900", "dm920")
 
