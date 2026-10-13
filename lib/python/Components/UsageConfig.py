@@ -31,10 +31,9 @@ visuallyImpairedCommentary = "NAR qad"
 
 def InitUsageConfig():
 	config.version = ConfigNumber(default=0)
-	if SystemInfo["brand"] in ('vuplus', 'ini'):
-		config.misc.remotecontrol_text_support = ConfigYesNo(default=True)
-	else:
-		config.misc.remotecontrol_text_support = ConfigYesNo(default=False)
+	config.misc.remotecontrol_text_support = ConfigYesNo(default=SystemInfo["brand"] in ('vuplus', 'ini'))
+
+	config.misc.longkey_threshold = ConfigSelection(default="4", choices=[(str(i), _("%d") % i) for i in range(1, 7)])
 
 	config.usage = ConfigSubsection()
 	config.usage.subnetwork = ConfigYesNo(default=True)
@@ -99,10 +98,7 @@ def InitUsageConfig():
 	config.usage.show_second_infobar = ConfigSelection(default="5", choices=choicelist)
 
 	def showsecondinfobarChanged(configElement):
-		if config.usage.show_second_infobar.value != "INFOBAREPG":
-			SystemInfo["InfoBarEpg"] = True
-		else:
-			SystemInfo["InfoBarEpg"] = False
+		SystemInfo["InfoBarEpg"] = configElement.value != "INFOBAREPG"
 	config.usage.show_second_infobar.addNotifier(showsecondinfobarChanged)
 
 	config.usage.second_infobar_simple = ConfigBoolean(descriptions={False: _("Standard"), True: _("Simple")}, graphic=False)
@@ -339,7 +335,7 @@ def InitUsageConfig():
 		config.usage.wakeOnLAN.addNotifier(wakeOnLANChanged)
 
 	# standby
-	if SystemInfo["displaytype"] in ("textlcd7segment"):
+	if SystemInfo["displaytype"] == "textlcd7segment":
 		config.usage.blinking_display_clock_during_recording = ConfigSelection(default="Rec", choices=[
 			("Rec", _("REC")),
 			("RecBlink", _("Blinking REC")),

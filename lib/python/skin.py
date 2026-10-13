@@ -1401,7 +1401,7 @@ class SkinContextHorizontal(SkinContext):
 			top = self.y
 			positions = pos.split(",")
 			if len(positions) == 2 and positions[0] in ("left", "right") and positions[1].isdigit():
-				top += int(int(positions[1]) * self.scale[0][0] / self.scale[0][1])
+				top += int(int(positions[1]) * self.scale[1][0] / self.scale[1][1])
 				pos = positions[0]
 			if pos == "left":
 				pos = (self.x, top)
@@ -1497,9 +1497,14 @@ def readSkin(screen, skin, names, desktop):
 	def processNone(widget, context, stack=None):
 		pass
 
+	stackOrder = 0
+
 	def proccesStackAddition(widget, stack, target):
+		nonlocal stackOrder
 		if stack:
 			target.stackIndex = stack.index
+			target.stackOrder = stackOrder  # Children must be stacked in skin (XML) order.
+			stackOrder += 1
 			pos = widget.attrib.get("position", "")
 			align = eWidget.eStackAlignNone
 			if stack.layout == 0:  # horizontal
@@ -1728,7 +1733,8 @@ def readSkin(screen, skin, names, desktop):
 			contextScreen = contextClass(context, widget.attrib.get("position"), widget.attrib.get("size"), widget.attrib.get("font"))
 			spacing = widget.attrib.get("spacing")
 			if spacing:
-				contextScreen.spacing = int(spacing)
+				axisScale = contextScreen.scale[0 if item.layout == 0 else 1]  # Spacing runs along the stack's layout axis.
+				contextScreen.spacing = int(int(spacing) * axisScale[0] / axisScale[1])
 			item.index = len(screen.stacks)
 			item.skinAttributes.append(("size", (contextScreen.w, contextScreen.h)))
 			item.skinAttributes.append(("position", (contextScreen.x, contextScreen.y)))
