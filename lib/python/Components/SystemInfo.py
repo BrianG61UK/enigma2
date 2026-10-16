@@ -215,6 +215,9 @@ SystemInfo["NumVideoDecoders"] = getNumVideoDecoders()
 SystemInfo["Udev"] = not fileExists("/dev/.devfsd")
 SystemInfo["HasFullHDSkinSupport"] = MODEL not in ("vipertwin",)
 SystemInfo["PIPAvailable"] = MODEL not in ("i55plus") and SystemInfo["NumVideoDecoders"] > 1
+# PiP from servicemp3 needs the second video device to accept memory writes from dvbvideosink (decoder=1).
+# VU+ dvb-bcm7444 only feeds video1 from the demux (brcm_video2_write is a stub), so use the DVB path there.
+SystemInfo["PiPServiceMP3"] = SystemInfo["PIPAvailable"] and BRAND != "vuplus"
 SystemInfo["CanMeasureFrontendInputPower"] = eDVBResourceManager.getInstance().canMeasureFrontendInputPower()
 SystemInfo["12V_Output"] = Misc_Options.getInstance().detected_12V_output()
 SystemInfo["ZapMode"] = fileCheck("/proc/stb/video/zapmode") or fileCheck("/proc/stb/video/zapping_mode")
@@ -246,6 +249,7 @@ SystemInfo["hasHdmiCec"] = fileExists("/dev/hdmi_cec") or fileExists("/dev/misc/
 SystemInfo["HasExternalPIP"] = MODEL not in ("et9x00", "et6x00", "et5x00") and fileCheck("/proc/stb/vmpeg/1/external")
 SystemInfo["VideoDestinationConfigurable"] = fileExists("/proc/stb/vmpeg/0/dst_left")
 SystemInfo["hasPIPVisibleProc"] = fileCheck("/proc/stb/vmpeg/1/visible")
+SystemInfo["PiPLimited720x576"] = BOXTYPE in ("gbquad4kpro", "vuduo4klite")  # hardware limits PiP to 720x576, no Big PiP / Splitscreen
 SystemInfo["VFD_scroll_repeats"] = not SystemInfo["7segment"] and MODEL not in ("et8500",) and fileCheck("/proc/stb/lcd/scroll_repeats")
 SystemInfo["VFD_scroll_delay"] = not SystemInfo["7segment"] and MODEL not in ("et8500",) and fileCheck("/proc/stb/lcd/scroll_delay")
 SystemInfo["VFD_initial_scroll_delay"] = not SystemInfo["7segment"] and MODEL not in ("et8500",) and fileCheck("/proc/stb/lcd/initial_scroll_delay")
