@@ -27,7 +27,7 @@ from Components.Sources.StaticText import StaticText
 from Components.SystemInfo import SystemInfo
 from Plugins.Plugin import PluginDescriptor
 from RecordTimer import AFTEREVENT
-from Screens.Screen import Screen
+from Screens.Screen import Screen, ScreenSummary
 from Screens.ButtonSetup import InfoBarButtonSetup, HelpableButtonSetupActionMap, getButtonSetupFunctions
 from Screens.ChoiceBox import ChoiceBox
 from Screens.EpgSelectionSingle import EPGSelectionSingle
@@ -209,6 +209,15 @@ def removed_userbouquets_available():
 	return False
 
 
+from Screens.Screen import ScreenSummary
+
+
+class BouquetSelectionBoxSummary(ScreenSummary):
+	def __init__(self, session, parent):
+		ScreenSummary.__init__(self, session, parent)
+		self.skinName = ["ScreenSummary"]
+
+
 class BouquetSelectionBox(Screen):
 	def __init__(self, session, title=None, onlyDeleted=False, greenText=None):
 		Screen.__init__(self, session)
@@ -228,8 +237,45 @@ class BouquetSelectionBox(Screen):
 			"yellow": self["config"].toggleAllSelection,
 		}, -2)
 
+		self.setTitle(self.title)
+
+	def createSummary(self):
+		return BouquetSelectionBoxSummary
+
 	def keySave(self):
 		self.close([x[0][1] for x in self["config"].list if x[0][3]])
+
+	def createSummary(self):
+		return BouquetSelectionBoxSummary
+
+
+class BouquetSelectionBoxSummary(ScreenSummary):
+	def __init__(self, session, parent):
+		ScreenSummary.__init__(self, session, parent=parent)
+		# Use SetupSummary screen as every display skin should have it.
+		self["SetupTitle"] = StaticText(parent.getTitle())
+		self["SetupEntry"] = StaticText()
+		self["SetupValue"] = StaticText()
+		self.skinName = "SetupSummary"
+		if self.addWatcher not in self.onShow:
+			self.onShow.append(self.addWatcher)
+		if self.removeWatcher not in self.onHide:
+			self.onHide.append(self.removeWatcher)
+
+	def addWatcher(self):
+		if self.selectionChanged not in self.parent["config"].onSelectionChanged:
+			self.parent["config"].onSelectionChanged.append(self.selectionChanged)
+		self.selectionChanged()
+
+	def removeWatcher(self):
+		if self.selectionChanged in self.parent["config"].onSelectionChanged:
+			self.parent["config"].onSelectionChanged.remove(self.selectionChanged)
+
+	def selectionChanged(self):
+		current = self.parent["config"].getCurrent()
+		if current:
+			self["SetupEntry"].text = current[0][0]
+			self["SetupValue"].text = _("Yes") if current[0][3] else _("No")
 
 
 class ChannelContextMenu(Screen):

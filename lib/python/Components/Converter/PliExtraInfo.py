@@ -56,6 +56,50 @@ def scramblingState(info):
 	return info.getInfo(iServiceInformation.sIsScrambled)
 
 
+# Whether /tmp/ecm.info describes the current service. The softcam does not clear it on a zap and a recording can keep it
+# busy, so it can be the other service's. It is not the current one's if the service has no CA descriptors and the stream
+# is clear or not yet known to be scrambled (1 is the only state in which it could still be decoding).
+def ecmFilePresentFor(info):
+	if not ecmFilePresent():
+		return False
+	return not (info and info.getInfo(iServiceInformation.sIsCrypted) != 1 and scramblingState(info) in (0, 2))
+
+
+# The ECM PIDs of the service (what the PMT says), empty if they are not known.
+def serviceEcmPids(info):
+	try:
+		return {pair[1] for pair in info.getInfoObject(iServiceInformation.sCAIDPIDs)}
+	except Exception:
+		return set()
+
+
+NO_ECM_DATA = ("", "0", "0", "0", "")
+_ownEcm = ("", None)  # The service reference and the last ecm.info data that belonged to that service.
+
+
+# The data of /tmp/ecm.info for the current service. With two services decoding (a recording and the one playing) the softcam
+# writes the file for both in turn, so what is in it is only the current service's if its ECM PID is one of the service's.
+# Otherwise the last data that was the current service's is used, and without any nothing is known. If the ECM PID of
+# either side is not known the file is taken as it is.
+def ecmDataFor(info):
+	global _ownEcm
+	data = getCachedEcmData()
+	if not info or not ecmFilePresent():
+		return data
+	pids = serviceEcmPids(info)
+	try:
+		ecmpid = int(data[3], 16)
+	except (TypeError, ValueError):
+		ecmpid = 0
+	if not pids or not ecmpid:
+		return data
+	ref = info.getInfoString(iServiceInformation.sServiceref)
+	if ecmpid in pids:
+		_ownEcm = (ref, data)
+		return data
+	return _ownEcm[1] if _ownEcm[0] == ref else NO_ECM_DATA
+
+
 # Used when there is no ecm.info: True if the stream can be called free to air. If the stream can be asked, that decides,
 # so an encrypted channel in a free news break is free to air (it still has CA descriptors, sIsCrypted == 1). Otherwise:
 # with a softcam loaded no ecm.info on an encrypted service also means free; without one ecm.info never exists, so nothing
@@ -137,8 +181,8 @@ def addspace(text):
 
 
 def getCryptoInfo(info):
-	if info and info.getInfo(iServiceInformation.sIsCrypted) == 1 or ecmFilePresent():
-		data = getCachedEcmData()
+	if info and info.getInfo(iServiceInformation.sIsCrypted) == 1 or ecmFilePresentFor(info):
+		data = ecmDataFor(info)
 		current_source = data[0]
 		current_caid = int(data[1], 16)
 		current_provid = data[2]
@@ -172,7 +216,7 @@ def createCurrentCaidLabel(info, currentCaid=None, currentDevice=None):
 				if stateDecoding == 2 and stateSlot not in (-1, 0, 3):
 					decodingCiSlot = slot
 
-	ecm_present = ecmFilePresent()
+	ecm_present = ecmFilePresentFor(info)
 	if not ecm_present and decodingCiSlot == -1:
 		return "FTA" if isFreeToAir(info) else ""
 
@@ -480,7 +524,7 @@ class PliExtraInfo(Poll, Converter, object):
 
 	def refreshCryptoInfo(self, info):
 		if info.getInfo(iServiceInformation.sIsCrypted) == 1:
-			data = getCachedEcmData()
+			data = ecmDataFor(info)
 			self.current_source = data[0]
 			self.current_caid = int(data[1], 16)
 			self.current_provid = data[2]
@@ -858,7 +902,7 @@ class PliExtraInfo(Poll, Converter, object):
 			if info.getInfo(iServiceInformation.sIsCrypted) != 1:
 				return False
 
-			data = getCachedEcmData()
+			data = ecmDataFor(info)
 
 			if data is None:
 				return False

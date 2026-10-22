@@ -889,6 +889,12 @@ int eDVBRecordFileThread::getFirstPTS(pts_t &pts)
 	return m_ts_parser.getFirstPTS(pts);
 }
 
+// Transient resource shortage: drop the chunk instead of aborting the thread.
+static bool isTransientAioError(int err)
+{
+	return err == ENOMEM || err == EAGAIN;
+}
+
 int eDVBRecordFileThread::AsyncIO::wait(const volatile int* stop_flag, int* short_write_count)
 {
 	if (aio.aio_buf == nullptr) // No request outstanding
@@ -951,9 +957,13 @@ int eDVBRecordFileThread::AsyncIO::wait(const volatile int* stop_flag, int* shor
 			}
 		}
 
+		int err = aio_error(&aio);
 		int r = aio_return(&aio);
 		if (r < 0)
 		{
+			// aio_return() does not set errno, the error is in aio_error()
+			if (err > 0)
+				errno = err;
 			eDebug("[eDVBRecordFileThread] wait: aio_return failed: %m");
 			aio.aio_buf = NULL;
 			return -1;
@@ -1001,7 +1011,18 @@ int eDVBRecordFileThread::AsyncIO::poll(int* short_write_count)
 		return 1;
 	}
 
-	int r = aio_return(&aio);
+	ssize_t r = aio_return(&aio);
+	if (err || r <= 0 || (size_t)r > aio.aio_nbytes)
+	{
+		aio.aio_buf = NULL;
+		if (isTransientAioError(err))
+		{
+			eWarning("[eDVBRecordFileThread] aio failed (error=%d): %s - dropping %zu bytes", err, strerror(err), aio.aio_nbytes);
+			return 0;
+		}
+		errno = err > 0 ? err : EIO;
+		return -1;
+	}
 
 	if (r >= 0 && (size_t)r != aio.aio_nbytes)
 	{ // short write
@@ -1027,6 +1048,8 @@ int eDVBRecordFileThread::AsyncIO::poll(int* short_write_count)
 			return 0;
 		}
 		eDebug("[eDVBRecordFileThread] poll: aio failed (error=%d): %s", err, strerror(err));
+		// aio_return() does not set errno, callers check it
+		errno = err;
 		return -1;
 	}
 	return 0;
@@ -1079,7 +1102,14 @@ int eDVBRecordFileThread::asyncWrite(int len)
 	int r = m_current_buffer->start(m_fd_dest, m_current_offset, len, m_buffer);
 	if (r < 0)
 	{
-		eWarning("[eDVBRecordFileThread] aio_write failed: %m");
+		if (isTransientAioError(errno))
+		{
+			eWarning("[eDVBRecordFileThread] aio_write failed: %m - dropping %d bytes", len);
+			return len;
+		}
+		int error = errno;
+		eDebug("[eDVBRecordFileThread] aio_write failed: %m");
+		errno = error;
 		return r;
 	}
 	m_current_offset += len;
@@ -1190,6 +1220,11 @@ int eDVBRecordFileThread::writeData(int len)
 					return -1;
 				usleep(1000);
 				continue;
+			}
+			if (w == 0)
+			{
+				eWarning("[eDVBRecordFileThread] sync write returned 0");
+				return -1;
 			}
 			eWarning("[eDVBRecordFileThread] sync write error: %m");
 			return -1;
