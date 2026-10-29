@@ -70,6 +70,12 @@ public:
 
 	// Render thread, context current.
 	bool initGL();
+	// Called (context current) when a producer appears (its frame file gets mapped) and again each time the layer turns from hidden
+	// to visible, in both cases BEFORE the frame texture is allocated: gEGLDC frees the GUI texture cache there so the browser and
+	// the layer find the GPU heap as empty as possible.
+	// True while a producer (the browser) is running, shown or not. Render thread.
+	bool sessionOpen() const { return m_session_open; }
+	void setOnShow(std::function<void()> cb) { m_on_show = std::move(cb); }
 	void destroyGL();
 	// Picks up producer changes (mapping, size, dirty rows) - true when there is
 	// something to draw. Cheap when nothing changed.
@@ -89,16 +95,20 @@ private:
 	void upload();
 	bool lockShm();
 	void unlockShm();
+	void releaseTextures();
 
 	// main thread
 	int m_sock = -1;
 	ePtr<eSocketNotifier> m_notifier;
 	std::function<void()> m_wake;
+	std::function<void()> m_on_show; // render thread
+	bool m_session_open = false;     // the producer's frame file is mapped and m_on_show ran for it (reset when the file goes away)
 	std::string m_sock_path;
 	ino_t m_sock_ino = 0;     // inode of our socket file: another gEGLDC (re)binding the same path must not lose it to our teardown
 	ePtr<eTimer> m_heal;      // notices the socket file vanishing or being replaced and binds it again
 
 	std::atomic<bool> m_changed{false}; // set by the main thread, consumed by sync()
+	std::atomic<int64_t> m_hidden_since_ms{0}; // render thread: since when the layer is hidden while a texture is held (0 = n/a)
 
 	// render thread
 	std::string m_shm_path;
@@ -112,7 +122,11 @@ private:
 	GLuint m_program = 0;
 	GLint m_tex_loc = -1;
 	GLint m_alpha_loc = -1;
-	GLuint m_texture = 0;
+	GLuint m_texture = 0; // the texture drawn: m_tex[m_cur]
+	GLuint m_tex[2] = {0, 0}; // updated in turn, see upload()
+	int m_cur = 0;
+	int m_st0[2] = {0, 0}; // rows [m_st0, m_st1) of each texture are older than the shared frame
+	int m_st1[2] = {0, 0};
 	int m_tex_w = 0;
 	int m_tex_h = 0;
 	bool m_full_dirty = false;

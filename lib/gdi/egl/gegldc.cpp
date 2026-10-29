@@ -474,6 +474,17 @@ bool gEGLDC::initEGL() {
 	}
 	if (!m_web_overlay.initGL())
 		eDebug("[gEGLDC] web overlay layer unavailable (shader/limits) - the browser cannot be shown through gEGLDC");
+	// The browser shares the small GPU heap and cannot evict: when its layer opens, drop every cached GUI texture first (they
+	// re-upload on demand, trimmed to the web budget by flip()).
+	m_web_overlay.setOnShow([this]() {
+		flushBlitBatch();
+		flushTextBatch();
+		m_texture_manager.processDeletions();
+		const size_t released = m_texture_manager.releaseUnusedTextures();
+		m_texture_manager.processDeletions();
+		glFinish();
+		eDebug("[gEGLDC] web layer opening/visible: released %.1fMB of GUI textures", released / 1048576.0);
+	});
 
 	// 9. upload projection matrices
 	m_basic_shader.setResolution((float)m_width, (float)m_height);
@@ -3067,11 +3078,48 @@ void gEGLDC::serviceOsdCapture() {
 	// bound explicitly so the readback never depends on that.
 	glBindFramebuffer(GL_FRAMEBUFFER, m_use_shadow_fbo ? m_shadow_fbo : 0);
 
+	// The web layer (HbbTV browser) is drawn straight into the window surface by flip(), never into the
+	// shadow framebuffer, so reading the shadow alone would leave it out of the grab. Compose it over a
+	// scratch copy of the shadow and read that instead; the shadow itself stays untouched.
+	GLuint scratch_tex = 0, scratch_fbo = 0;
+	if (m_use_shadow_fbo && !m_straight_alpha_present && m_web_overlay.sync()) {
+		glGenTextures(1, &scratch_tex);
+		glBindTexture(GL_TEXTURE_2D, scratch_tex);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+		glCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 0, 0, width, height); // reads the bound shadow framebuffer
+		glBindTexture(GL_TEXTURE_2D, 0);
+		glGenFramebuffers(1, &scratch_fbo);
+		glBindFramebuffer(GL_FRAMEBUFFER, scratch_fbo);
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, scratch_tex, 0);
+		if (glGetError() == GL_NO_ERROR && glCheckFramebufferStatus(GL_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE) {
+			glScissor(0, 0, m_phys_width, m_phys_height);
+			glViewport(0, 0, m_phys_width, m_phys_height);
+			m_web_overlay.draw(m_width, m_height);
+			glEnable(GL_BLEND);
+			applyViewport();
+		} else {
+			eDebug("[gEGLDC] OSD capture: scratch framebuffer failed - grab without the web layer");
+			glBindFramebuffer(GL_FRAMEBUFFER, m_shadow_fbo);
+			glDeleteFramebuffers(1, &scratch_fbo);
+			glDeleteTextures(1, &scratch_tex);
+			scratch_fbo = scratch_tex = 0;
+		}
+	}
+
 	std::vector<uint8_t> pixels((size_t)width * (size_t)height * 4U);
 	glPixelStorei(GL_PACK_ALIGNMENT, 4);
 	glReadPixels(0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, pixels.data());
 
 	GLenum err = glGetError();
+	if (scratch_fbo) {
+		glBindFramebuffer(GL_FRAMEBUFFER, m_shadow_fbo);
+		glDeleteFramebuffers(1, &scratch_fbo);
+		glDeleteTextures(1, &scratch_tex);
+	}
 	if (err != GL_NO_ERROR) {
 		eDebug("[gEGLDC] OSD capture readback failed: 0x%x", err);
 		m_osd_capture.fail();
@@ -3716,6 +3764,29 @@ void gEGLDC::updateOverlayShadow(bool want) {
 }
 
 void gEGLDC::flip() {
+	// While the web layer (HbbTV) is shown, enigma2's own textures may use only part of the GPU heap. The texture manager keeps every
+	// texture until the driver runs out of memory - on a 256 MB heap shared with the browser it takes all that is free, and the
+	// browser, which cannot evict, then loses its tiles (black rectangles, an empty layer) until enigma2 is restarted and the cache is
+	// empty again. ENIGMA_WEB_TEX_BUDGET_MB (default 48, 0 = no limit). Before nextFrame(): what was drawn this frame stays.
+	// Outside HbbTV the manager's own soft budget (ENIGMA_TEX_BUDGET_MB, or learned from the first out-of-memory) applies instead.
+	// Either way at most a few textures are deleted per frame: the excess goes away gradually, not in one stall (nor inside the draw
+	// that hit the driver's limit, which is what made the UI hiccup).
+	size_t budget = m_texture_manager.softBudget();
+	const bool web_active = m_web_overlay_was_on || m_web_overlay.sessionOpen();
+	if (web_active) {
+		static const size_t web_budget = []() {
+			const char* e = getenv("ENIGMA_WEB_TEX_BUDGET_MB");
+			return (size_t)(e ? atoi(e) : 48) << 20;
+		}();
+		if (web_budget && (!budget || web_budget < budget))
+			budget = web_budget;
+	}
+	if (budget) {
+		const size_t freed = m_texture_manager.trimTo(budget, 6);
+		if (freed && web_active)
+			eDebug("[gEGLDC] web layer active: released %.1fMB of textures (budget %.0fMB, now ~%.1fMB)", freed / 1048576.0, budget / 1048576.0,
+				m_texture_manager.liveBytes() / 1048576.0);
+	}
 	// Defines "this frame" for the texture manager's LRU eviction.
 	m_texture_manager.nextFrame();
 	std::chrono::steady_clock::time_point prof_t0;
@@ -3735,6 +3806,7 @@ void gEGLDC::flip() {
 		// The web layer is composited as premultiplied "over" onto the finished frame, which only
 		// matches platforms whose compositor takes the OSD premultiplied (see gweb_overlay.h).
 		const bool overlay_on = !m_straight_alpha_present && m_web_overlay.sync();
+		m_web_overlay_was_on = overlay_on;
 		updateOverlayShadow(overlay_on);
 
 		// eglSwapBuffers() is only defined for window surfaces; a pixmap-surface
