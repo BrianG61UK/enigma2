@@ -44,7 +44,32 @@
       "Bash(awk -F: '$1>1205 && $1<1625')",
       "Bash(python -m py_compile lib/python/Components/ConfigList.py)",
       "Bash(python -m py_compile lib/python/Screens/Setup.py)",
-      "Bash(python -m py_compile lib/python/Components/ActionMap.py lib/python/Screens/Setup.py)"
+      "Bash(python -m py_compile lib/python/Components/ActionMap.py lib/python/Screens/Setup.py)",
+      "Bash(python -I scan.py /c/Users/dimit/Desktop/bcm7439.ko '^parm=|mode_option|alternate_image|^config|[0-9]{3,4}x[0-9]{3,4}|bcmfb' 40)",
+      "Bash(python -I scan.py /c/Users/dimit/Desktop/bcm7439.ko 'mode|yres_virtual|smem|bcm_fb|fb alloc|pan' 40)",
+      "Bash(awk 'NR>=90 && NR<=131 && /public:|protected:|private:|enum/ {print NR\": \"$0}' lib/gui/elistbox.h)",
+      "Bash(python -c \"import ast,sys;ast.parse\\(open\\('lib/python/skin.py',encoding='utf-8'\\).read\\(\\)\\)\")",
+      "Bash(python -I \"C:/Users/dimit/AppData/Local/Temp/claude/ab798c012abd2d97/7cc5eb21-b5e1-47e4-8247-34251217999d/scratchpad/patch_skin.py\")",
+      "Bash(python -c \"import ast;ast.parse\\(open\\('lib/python/skin.py',encoding='utf-8'\\).read\\(\\)\\);print\\('syntax ok'\\)\")",
+      "Bash(python -c ' *)",
+      "Bash(python -I \"C:/Users/dimit/AppData/Local/Temp/claude/ab798c012abd2d97/7cc5eb21-b5e1-47e4-8247-34251217999d/scratchpad/patch2.py\")",
+      "Bash(python -c \"import ast;ast.parse\\(open\\('lib/python/Components/ServiceList.py',encoding='utf-8'\\).read\\(\\)\\)\")",
+      "Bash(python -I \"C:/Users/dimit/AppData/Local/Temp/claude/ab798c012abd2d97/7cc5eb21-b5e1-47e4-8247-34251217999d/scratchpad/patch4.py\")",
+      "Bash(sed -n '/horizontal distribution/,/int x = row.padLeft/p' lib/service/listboxservicetpl.cpp)",
+      "Bash(python -I \"C:/Users/dimit/AppData/Local/Temp/claude/ab798c012abd2d97/7cc5eb21-b5e1-47e4-8247-34251217999d/scratchpad/patch5.py\")",
+      "Bash(python -I \"C:/Users/dimit/AppData/Local/Temp/claude/ab798c012abd2d97/7cc5eb21-b5e1-47e4-8247-34251217999d/scratchpad/patch6.py\")",
+      "Bash(python -c \"import ast;ast.parse\\(open\\('lib/python/skin.py',encoding='utf-8'\\).read\\(\\)\\);print\\('py ok'\\)\")",
+      "Bash(grep -n 'for`\\\\|fall back\\\\|falls back\\\\|marker' doc/SERVICELIST_TEMPLATES.md)",
+      "Bash(python asm.py)",
+      "Bash(python -c \"import ast;ast.parse\\(open\\('EpgListGrid.new.py'\\).read\\(\\)\\);print\\('ok'\\)\")",
+      "Bash(cp EpgListGrid.new.py /e/Enigma2Dev/OpenViX/enigma2/OpenViX-enigma2/lib/python/Components/EpgListGrid.py)",
+      "Bash(python -m pyflakes lib/python/Components/EpgListGrid.py)",
+      "Bash(echo \"- [Grid EPG native list]\\(project_gridepg_native_list.md\\) — eListboxEpgGridContent C++ renderer written 2026-11-06, unbuilt/untested\" >> \"/c/Users/dimit/.claude/projects/e--Enigma2Dev-OpenViX-enigma2-OpenViX-enigma2/memory/MEMORY.md\"; git status --short)",
+      "Bash(python -c \"import ast;ast.parse\\(open\\('lib/python/Components/EpgListGrid.py'\\).read\\(\\)\\);print\\('ok'\\)\")",
+      "Bash(touch lib/gui/elistboxcontent.* lib/gui/elistboxepggrid.* lib/python/Components/EpgListGrid.py)"
+    ],
+    "additionalDirectories": [
+      "C:\\Users\\dimit\\.claude\\projects\\e--Enigma2Dev-OpenViX-enigma2-OpenViX-enigma2\\memory"
     ]
   }
 }
