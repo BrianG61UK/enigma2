@@ -11,6 +11,8 @@
 #include <lib/service/iservicescrambled.h>
 #include "filepush.h"
 
+class eDVBCSABuffer;
+
 class eDVBDemux: public iDVBDemux
 {
 	DECLARE_REF(eDVBDemux);
@@ -168,7 +170,7 @@ public:
 	void stopSaveMetaInformation();
 	int getLastPTS(pts_t &pts);
 	int getFirstPTS(pts_t &pts);
-	void setTargetFD(int fd) { m_fd_dest = fd; }
+	void setTargetFD(int fd) { m_fd_dest = fd; m_dest_is_file = -1; }
 	void enableAccessPoints(bool enable) { m_ts_parser.enableAccessPoints(enable); }
 	void setDescrambler(ePtr<iServiceScrambled> serviceDescrambler) { m_serviceDescrambler = serviceDescrambler; };
 	void setDiscardOnTimeout(bool discard) { m_discard_on_timeout = discard; }
@@ -182,10 +184,15 @@ public:
 	// Virtual: wait for first data (only ScrambledThread actually waits)
 	virtual bool waitForFirstData(int /*timeout_ms*/) { return true; }
 
+	// Playback delay in ms, 0 = off. Only the ScrambledThread descrambles.
+	virtual void setPlaybackDelay(int /*delay_ms*/) { /* Only the ScrambledThread descrambles. */ }
+
 protected:
 	int asyncWrite(int len);
 	/* override */ int writeData(int len);
 	/* override */ void flush();
+	/* data == nullptr writes m_buffer; the delay passes its own pointer. */
+	int _syncWrite(int len, bool parse = true, const unsigned char *data = nullptr);
 
 	struct AsyncIO
 	{
@@ -204,6 +211,7 @@ protected:
 	eMPEGStreamParserTS m_ts_parser;
 	off_t m_current_offset;
 	int m_fd_dest;
+	int m_dest_is_file = -1; // -1 = not checked yet, see _syncWrite()
 	bool m_sync_mode;
 	bool m_discard_on_timeout;
 	typedef std::vector<AsyncIO> AsyncIOvector;
@@ -227,10 +235,12 @@ public:
 
 protected:
 	int writeData(int len);
+	/* Socket write of data outside m_buffer, for the delay buffer's chunk.
+	 * Synchronous: the AIO rotation belongs to the producer's buffers. */
+	int syncWriteTo(const unsigned char *data, int len) const;
 	void flush();
 };
 
-// Note: flush() inherited from StreamThread (cancel behavior)
 class eDVBRecordScrambledThread: public eDVBRecordStreamThread
 {
 public:
@@ -244,8 +254,19 @@ public:
 	// Reset the first-data flag (call before start() if reusing)
 	void resetFirstDataFlag();
 
+	/* Call before start(). 0 = off, AUTO_PLAYBACK_DELAY = start small and
+	 * grow on late control words. */
+	void setPlaybackDelay(int delay_ms) override;
+
+	static const int MAX_PLAYBACK_DELAY_MS = 5000;
+	static const int AUTO_PLAYBACK_DELAY = -1;
+	/* Where the automatic starts. Small, so zapping stays quick. */
+	static const int AUTO_PLAYBACK_START_MS = 100;
+
 protected:
 	int writeData(int len);
+	/* Stops the delay buffer, then the StreamThread's cancel behaviour. */
+	void flush() override;
 
 private:
 	unsigned char key[8];
@@ -256,6 +277,19 @@ private:
 	pthread_cond_t m_data_ready_cond;
 	bool m_first_data_written;
 	bool m_is_streaming;
+
+	// While active, writeData() only queues; the buffer thread descrambles
+	// and writes once a chunk is due.
+	eDVBCSABuffer *m_delay_buffer{nullptr};
+	bool m_delay_auto{false};
+	int m_delay_config{0};        // What setPlaybackDelay() was asked for
+	bool m_delay_restart{false};  // flush() stopped the buffer, rebuild it
+	bool m_delay_settling{false};  // a growth is still working its way out
+	void restartPlaybackDelay();
+	void consumeDelayed(unsigned char *data, int len);
+	void signalFirstData(int written);
+	/* What writeData() does to a chunk once it is descrambled. */
+	void tapAndCount(const unsigned char *data, int len);
 };
 
 class eDVBTSRecorder: public iDVBTSRecorder, public sigc::trackable
@@ -286,6 +320,7 @@ public:
 
 	RESULT setDescrambler(ePtr<iServiceScrambled>);
 	void setDiscardOnTimeout(bool discard);
+	void setPlaybackDelay(int delay_ms) override;
 	RESULT setMonitorFD(int fd) override;
 	RESULT setCountPID(int slot, int pid) override;
 	int getCountPID(int slot) override;
@@ -294,6 +329,7 @@ public:
 	// Wait for first data to be written (for SoftDecoder sync)
 	bool waitForFirstData(int timeout_ms);
 	void setMinWrite(size_t size) override;
+	void setServiceFilter(int serviceId, int pmtPid, bool shared) override;
 private:
 	RESULT startPID(int pid);
 	void stopPID(int pid);
