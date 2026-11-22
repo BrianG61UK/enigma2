@@ -3,7 +3,7 @@ from skin import parseScale, applySkinFactor, parseBoolean, parseColor, parseFon
 
 from Components.Addons.GUIAddon import GUIAddon
 from Components.config import config
-from Components.Converter.PliExtraInfo import createCurrentCaidLabel
+from Components.Converter.PliExtraInfo import createCurrentCaidLabel, scramblingState
 from Components.Converter.ServiceInfo import AUDIO_CHANNEL_LABELS, AUDIO_CODEC_INFO, VIDEO_CODEC_INFO, getCurrentAudioChannels, getCurrentAudioCodec, getCurrentVideoCodec, getVideoHeight
 from Components.Converter.VAudioInfo import StdAudioDesc
 from Components.Label import Label
@@ -241,7 +241,7 @@ class ServiceInfoBar(GUIAddon):
 			elif key == "crypt" and not isRef:
 				if "%3a//" in pending_sref and pending_service_ref and not pending_service_ref.getStreamRelay():
 					return key + "_off"
-				if info.getInfo(iServiceInformation.sIsCrypted) == 1 and info.getInfo(iServiceInformation.sIsSoftCSA) != 1:
+				if info.getInfo(iServiceInformation.sIsCrypted) == 1 and info.getInfo(iServiceInformation.sIsSoftCSA) != 1 and scramblingState(info) != 0:
 					self.isCryptedDetected = True
 					return "IS_CRYPT"
 				if info.getInfo(iServiceInformation.sIsSoftCSA) == 1:
@@ -468,7 +468,7 @@ class ServiceInfoBar(GUIAddon):
 		for (attrib, value) in self.skinAttributes[:]:
 			if attrib == "pixmaps":
 				self.pixmaps = {k: v for k, v in (item.split(':') for item in value.split(','))}
-			if attrib == "pixmapsDisabled":
+			elif attrib == "pixmapsDisabled":
 				self.pixmapsDisabled = {k: v for k, v in (item.split(':') for item in value.split(','))}
 			elif attrib == "audioCodecIconPath":
 				self.audioCodecIconPath = value
